@@ -1,31 +1,23 @@
-import yaml
 import discord
 from discord.ext import commands
 
-bot = commands.Bot(command_prefix='$')
-
-# Notification event for when the bot is up and running
-@bot.event
-async def on_ready():
-    print("Bot is ready.")
+import config
 
 
-# Main message handler
-@bot.event
-async def on_message(ctx):
-    # Process the other commands first
-    await bot.process_commands(ctx)
+class BrewBot(discord.ext.commands.Bot):
+    def __init__(self):
+        super().__init__(command_prefix=config.COMMAND_PREFIX)
 
+        # Load the bot's modules
+        for module in config.BOT_MODULES:
+            self.load_extension(module)
 
-def main():
-    # Load configuration file
-    with open("config.yml", 'r') as ymlfile:
-        cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
+    async def on_message(self, message):
+        await super().process_commands(message)
 
-    # Launch the bot
-    bot.run(cfg['bot']['discord_api_key'])
+    async def on_ready(self):
+        print("Bot is Ready")
 
-
-if __name__ == '__main__':
-    main()
+    def run(self):
+        super().run(config.DISCORD_BOT_TOKEN)
 
