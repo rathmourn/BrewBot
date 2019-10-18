@@ -14,6 +14,7 @@ class DiscordStats(commands.Cog):
     @commands.command()
     async def role_report(self, ctx, role_name=None, report_file_name=None):
         """Command generate discord statistics of a server role.
+
                 Args:
                     role_name:
                         - The role you are searching for (case insensitive, but if there are spaces you will need to
