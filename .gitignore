@@ -2,4 +2,6 @@
 venv/
 config.py
 db/db_design.txt
-db/aces_brew.db
+*.db
+cogs/_module_shell.py
+
