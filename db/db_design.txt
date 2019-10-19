@@ -1,0 +1,30 @@
+members
+    |
+    - user_id (int) (primary_key)
+    - created_at (datetime)                                 # Store when record was created/user registered
+    - discord_user_info (foreign key -> discord_info)       # Enforce link to discord_info table entry
+    - bungie_user_info (foreign key -> bungie_info)         # Enforce link to bungie_info table entry
+    - clan_activity_score (int)                             # Store current clan activity score
+    - reports_below_threshold (int)                         # Store number of reports user has been delinquent
+
+
+discord_info
+    |
+    - user_id (int) (primary_key)
+    - discord_id (string)                                   # Store user's unique discord ID
+    - discord_name (string)                                 # Store server specific nick/display_name
+    - chat_events (int)                                     # Current chat_events count over time period
+    - characters_typed (int)                                # Current characters_typed over time period
+    - vc_minutes (blob)                                     # Current VC minute by day in blob (CSV list by day)
+
+
+bungie_info
+    |
+    - user_id (int) (primary_key)
+    - bungie_id (string)                                    # Store user's bungie ID
+    - destiny_name (string)                                 # Store user's current destiny steam name
+    - clan_name (string)                                    # Store user's clan
+    - seconds_played (int)                                  # Current seconds played over time period
+    - clan_members_played_with (int)                        # Number of clan members played with over time period
+    - unique_clan_members_played_with (int)                 # Unqiue clan members played with over time period
+
