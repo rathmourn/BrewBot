@@ -1,3 +1,5 @@
 .idea/
 venv/
 config.py
+db/db_design.txt
+db/aces_brew.db
