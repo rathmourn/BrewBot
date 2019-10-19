@@ -9,6 +9,8 @@ Base = declarative_base()
 
 
 class DiscordInfo(Base):
+    """DiscordInfo class to define table schema
+    """
     __tablename__ = 'discord_info'
 
     id = Column(Integer, primary_key=True)
@@ -24,6 +26,8 @@ class DiscordInfo(Base):
 
 
 class BungieInfo(Base):
+    """BungieInfo class to define table schema
+    """
     __tablename__ = 'bungie_info'
 
     id = Column(Integer, primary_key=True)
@@ -40,6 +44,8 @@ class BungieInfo(Base):
 
 
 class ClanMember(Base):
+    """ClanMember class to define table schema
+    """
     __tablename__ = 'clan_members'
 
     id = Column(Integer, primary_key=True)
@@ -57,5 +63,6 @@ class ClanMember(Base):
     bungie_user_info = relationship(BungieInfo, back_populates='clan_member')
 
 
+# Database generation for initial init
 engine = create_engine('sqlite:///' + config.BOT_DB_NAME)
 Base.metadata.create_all(engine)
