@@ -4,4 +4,3 @@ config.py
 db/db_design.txt
 *.db
 cogs/_module_shell.py
-
