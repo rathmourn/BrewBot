@@ -5,8 +5,9 @@ import config
 
 
 class BrewBot(discord.ext.commands.Bot):
-    def __init__(self):
+    def __init__(self, db_session):
         super().__init__(command_prefix=config.COMMAND_PREFIX)
+        self.db_session = db_session
 
         # Load the bot's modules
         for module in config.BOT_MODULES:
