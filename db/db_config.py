@@ -54,6 +54,8 @@ class ClanMember(Base):
     clan_activity_score = Column(Integer)
     reports_below_threshold = Column(Integer)
 
+    steam_join_id = Column(String)
+
     # Foreign key and bi-directional link to discord_info table
     discord_user_info_id = Column(Integer, ForeignKey('discord_info.id'))
     discord_user_info = relationship(DiscordInfo, back_populates='clan_member')

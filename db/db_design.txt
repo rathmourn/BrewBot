@@ -4,6 +4,7 @@ members
     - created_at (datetime)                                 # Store when record was created/user registered
     - discord_user_info (foreign key -> discord_info)       # Enforce link to discord_info table entry
     - bungie_user_info (foreign key -> bungie_info)         # Enforce link to bungie_info table entry
+    - steam_join_id (string)                                # Store player's steam join ID
     - clan_activity_score (int)                             # Store current clan activity score
     - reports_below_threshold (int)                         # Store number of reports user has been delinquent
 
