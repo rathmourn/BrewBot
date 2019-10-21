@@ -1,6 +1,8 @@
 .idea/
 venv/
-config.py
-db/db_design.txt
+_old/config.py
+_old/db/db_design.txt
 *.db
-cogs/_module_shell.py
+_old/cogs/_module_shell.py
+
+_old/
