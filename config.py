@@ -12,4 +12,6 @@ BOT_COMMAND_PREFIX = '$'
 BOT_DESCRIPTION = "I am BrewBot."
 BOT_DB_NAME = "aces_brew.db"
 
-BOT_MODULES = []
+BOT_MODULES = [
+    'cogs.clan_activity'
+]
