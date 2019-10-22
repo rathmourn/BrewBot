@@ -20,19 +20,28 @@ class ActivityStats(Base):
     discord_chat_events = Column(Integer)
     discord_characters_typed = Column(Integer)
     discord_vc_time = Column(String)
+    discord_last_chat_date = Column(DateTime)
+    discord_last_vc_date = Column(DateTime)
 
     bungie_seconds_played = Column(Integer)
     bungie_sum_clan_members_played_with = Column(Integer)
     bungie_unique_clan_members_played_with = Column(Integer)
+    bungie_activities_completed = Column(Integer)
+    bungie_raids_completed = Column(Integer)
+    bungie_strikes_completed = Column(Integer)
+    bungie_pvp_completed = Column(Integer)
+    bungie_date_last_activity = Column(DateTime)
+
 
     activity_score = Column(Integer)
     activity_rank = Column(Integer)
     activity_status = Column(Integer)
 
     reports_below_threshold = Column(Integer)
+    last_update_date = Column(DateTime)
 
     # Bidirectional link back to the clan member table
-    clan_member_info = relationship("ClanMember", userlist=False, back_populates='activity_stats_info')
+    clan_member_info = relationship("ClanMember", uselist=False, back_populates='activity_stats_info')
 
 
 class ClanMember(Base):
@@ -44,6 +53,7 @@ class ClanMember(Base):
     id = Column(Integer, primary_key=True)
 
     bungie_id = Column(String)
+    created_at = Column(DateTime)
     steam_display_name = Column(String)
     discord_display_name = Column(String)
     clan_name = Column(String)
