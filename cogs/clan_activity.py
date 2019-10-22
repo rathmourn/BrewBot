@@ -32,6 +32,11 @@ class ClanActivity(commands.Cog):
             await ctx.send("Unauthorized.")
 
 
+    @commands.command(hidden=True)
+    @is_authorized()
+    async def test_register(self, ctx, steam_name):
+        await ctx.author.send("Attempting to look up your destiny profile: " + steam_name)
+
 # Cog extension entry point
 def setup(bot):
     print("[*] Loading Clan Activity module.")
