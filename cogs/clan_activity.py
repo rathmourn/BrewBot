@@ -3,6 +3,11 @@ import discord
 
 
 def is_authorized():
+    """
+    Command decorator to validate if a user is authorized for a bot's command or not.
+    Returns: None
+
+    """
     async def check_authorization(ctx):
         return str(ctx.author.display_name) == "Rathmourn"
     return commands.check(check_authorization)
@@ -15,9 +20,6 @@ class ClanActivity(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-
-    # ---- HELPER FUNCTIONS
-    # ---- END HELPER FUNCTIONS
 
     @commands.command(hidden=True)
     @is_authorized()
