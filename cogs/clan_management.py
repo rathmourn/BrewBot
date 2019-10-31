@@ -66,69 +66,67 @@ class ClanManagement(commands.Cog):
 
         # Verify and complete registration
         elif code == 'verify':
-            print(code, discord_id, destiny_id)
             user_data = {}
 
-            successful_pull = False
             profile_types = [3, 2, 1, 5]
 
             for profile_type in profile_types:
                 profile_data = await destiny.api.get_profile(profile_type, destiny_id, components=['100'])
-                print(profile_data)
+
                 if profile_data['ErrorCode'] == 1:
-                    break
+                    player_groups_query = await destiny.api.get_groups_for_member(profile_type, destiny_id)
 
-            player_groups_query = await destiny.api.get_groups_for_member(2, destiny_id)
-
-            if len(player_groups_query['Response']['results']) > 0:
-                player_clan_id = player_groups_query['Response']['results'][0]['group']['groupId']
-                player_clan_name = player_groups_query['Response']['results'][0]['group']['name']
-            else:
-                player_clan_id = None
-                player_clan_name = None
-
-            # Add their discord ID and name to the records
-            user_data.update({'discord_id': discord_id})
-
-            for member in ctx.guild.members:
-                if str(member.id) == str(discord_id):
-                    if member.nick:
-                        user_data.update({'discord_name': str(member.nick)})
+                    if len(player_groups_query['Response']['results']) > 0:
+                        player_clan_id = player_groups_query['Response']['results'][0]['group']['groupId']
+                        player_clan_name = player_groups_query['Response']['results'][0]['group']['name']
                     else:
-                        user_data.update({'discord_name': str(member.display_name)})
+                        player_clan_id = None
+                        player_clan_name = None
 
-            # Add their bungie id and name to the records
-            user_data.update({'bungie_id': str(destiny_id)})
-            user_data.update(
-                {'bungie_name': str(profile_data['Response']['profile']['data']['userInfo']['displayName'])})
+                    # Add their discord ID and name to the records
+                    user_data.update({'discord_id': discord_id})
 
-            # Add their clan info
-            if player_clan_name:
-                user_data.update({'clan_name': player_clan_name})
-                user_data.update({'clan_id': player_clan_id})
+                    for member in ctx.guild.members:
+                        if str(member.id) == str(discord_id):
+                            if member.nick:
+                                user_data.update({'discord_name': str(member.nick)})
+                            else:
+                                user_data.update({'discord_name': str(member.display_name)})
 
-            # Set time created
-            user_data.update({'created_at': str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))})
+                    # Add their bungie id and name to the records
+                    user_data.update({'bungie_id': str(destiny_id)})
+                    user_data.update(
+                        {'bungie_name': str(profile_data['Response']['profile']['data']['userInfo']['displayName'])})
 
-            # Complete the record with null values for now
-            user_data.update({'steam_join_id': '0'})
-            user_data.update({'clan_activity_score': 0})
-            user_data.update({'reports_below_threshold': 0})
-            user_data.update({'chat_events': 0})
-            user_data.update({'characters_typed': 0})
-            user_data.update({'vc_minutes': 0})
-            user_data.update({'game_activity': {}})
-            user_data.update({'seconds_played': 0})
-            user_data.update({'unique_clan_members_played_with': 0})
-            user_data.update({'clan_members_played_with': 0})
+                    # Add their clan info
+                    if player_clan_name:
+                        user_data.update({'clan_name': player_clan_name})
+                        user_data.update({'clan_id': player_clan_id})
 
-            if os.path.isfile(config.BOT_DB + str(discord_id) + ".json"):
-                await ctx.send("Profile already registered. Contact an admin.")
-            else:
-                with open(config.BOT_DB + str(discord_id) + ".json", 'w+') as user_file:
-                    json.dump(user_data, user_file)
+                    # Set time created
+                    user_data.update({'created_at': str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))})
 
-                await ctx.send("Registration complete!")
+                    # Complete the record with null values for now
+                    user_data.update({'steam_join_id': '0'})
+                    user_data.update({'clan_activity_score': 0})
+                    user_data.update({'reports_below_threshold': 0})
+                    user_data.update({'chat_events': 0})
+                    user_data.update({'characters_typed': 0})
+                    user_data.update({'vc_minutes': 0})
+                    user_data.update({'game_activity': {}})
+                    user_data.update({'seconds_played': 0})
+                    user_data.update({'unique_clan_members_played_with': 0})
+                    user_data.update({'clan_members_played_with': 0})
+
+                    if os.path.isfile(config.BOT_DB + str(discord_id) + ".json"):
+                        await ctx.send("Profile already registered. Contact an admin.")
+                    else:
+                        with open(config.BOT_DB + str(discord_id) + ".json", 'w+') as user_file:
+                            json.dump(user_data, user_file)
+
+                        await ctx.send("Registration complete!")
+
+                    break
 
         await destiny.close()
 
@@ -146,6 +144,7 @@ class ClanManagement(commands.Cog):
 
                 # Open the initial report file and write the header
                 report_file_name = str(clan['clan_name']).replace(" ", "_").replace("'", "") + ".csv"
+
                 with open("reports/" + report_file_name, 'w+') as csv_report:
                     csv_writer = csv.writer(csv_report)
                     csv_writer.writerow(
@@ -155,29 +154,33 @@ class ClanManagement(commands.Cog):
 
                     # Iterate the registered users
                     for registered_user in os.listdir(config.BOT_DB):
-                        with open(config.BOT_DB + registered_user) as user_data_file:
-                            user_data = json.load(user_data_file)
+                        if registered_user.endswith('.json'):
+                            with open(config.BOT_DB + registered_user) as user_data_file:
+                                user_data = json.load(user_data_file)
 
-                        # If they are in the current clan we care about
-                        if user_data['clan_id'] == clan['clan_id']:
-                            steam_name = user_data['bungie_name']
-                            discord_name = user_data['discord_name']
-                            is_registered = True
+                            # If they are in the current clan we care about
+                            if user_data['clan_id'] == clan['clan_id']:
+                                steam_name = user_data['bungie_name']
+                                discord_name = user_data['discord_name']
+                                is_registered = True
 
-                            clan_search_results = await self.check_if_clan_member(bungie_id=user_data['bungie_id'])
-                            is_in_clan = clan_search_results['is_member']
+                                clan_search_results = await self.check_if_clan_member(bungie_id=user_data['bungie_id'])
+                                is_in_clan = clan_search_results['is_member']
 
-                            activity_score = user_data['clan_activity_score']
+                                activity_score = user_data['clan_activity_score']
 
-                            is_in_discord = False
-                            for member in ctx.guild.members:
-                                if str(member.id) == str(user_data['discord_id']):
-                                    is_in_discord = True
+                                is_in_discord = False
+                                for guild in self.bot.guilds:
+                                    # Only do Ace's Brew Discord
+                                    if str(guild.id) == "534781834924523520":
+                                        for member in guild.members:
+                                            if str(member.id) == str(user_data['discord_id']):
+                                                is_in_discord = True
 
-                            csv_writer.writerow(
-                                [steam_name, discord_name, is_registered, is_in_clan, is_in_discord, int(activity_score)])
+                                csv_writer.writerow(
+                                    [steam_name, discord_name, is_registered, is_in_clan, is_in_discord, int(activity_score)])
 
-                            registered_users.append(user_data)
+                                registered_users.append(user_data)
 
                     # Iterate the roster for all the unregistered folks
                     with open("clans/" + str(clan['clan_id']) + ".json") as clan_data_file:
@@ -189,14 +192,17 @@ class ClanManagement(commands.Cog):
                         member_registered = False
                         for registered_user in registered_users:
                             if clan_member['id'] == registered_user['bungie_id']:
+                                print("COMPARE: {} <=> {} found TRUE.".format(clan_member['id'],
+                                                                              registered_user['bungie_id']))
                                 member_registered = True
 
                         # If he was, we can ignore this one
-                        if member_registered is not True:
+                        if member_registered is False:
+                            print("Writing FALSE COMP: {}".format(clan_member['name']))
                             csv_writer.writerow([clan_member['name'], 'N/A', 'False', 'True', 'N/A', '0'])
 
-                # Upload the file to discord
-                await ctx.send(file=discord.File("reports/" + report_file_name))
+                    # Upload the file to discord
+                    await ctx.send(file=discord.File("reports/" + report_file_name))
 
     @commands.command()
     async def roster_count(self, ctx):
@@ -292,56 +298,63 @@ class ClanManagement(commands.Cog):
 
             verify_id = args[1]
 
-            profile_data = await destiny.api.get_profile(3, verify_id, components=['100'])
-            player_groups_query = await destiny.api.get_groups_for_member(3, args[1])
+            profile_types = [3, 2, 1, 5]
 
-            if len(player_groups_query['Response']['results']) > 0:
-                player_clan_id = player_groups_query['Response']['results'][0]['group']['groupId']
-                player_clan_name = player_groups_query['Response']['results'][0]['group']['name']
-            else:
-                player_clan_id = None
-                player_clan_name = None
+            for profile_type in profile_types:
+                profile_data = await destiny.api.get_profile(profile_type, verify_id, components=['100'])
 
-            # Add their discord ID and name to the records
-            user_data.update({'discord_id': str(ctx.author.id)})
+                if profile_data['ErrorCode'] == 1:
+                    player_groups_query = await destiny.api.get_groups_for_member(profile_type, args[1])
 
-            if hasattr(ctx.author, 'nick'):
-                user_data.update({'discord_name': str(ctx.author.nick)})
-            else:
-                user_data.update({'discord_name': str(ctx.author.display_name)})
+                    if len(player_groups_query['Response']['results']) > 0:
+                        player_clan_id = player_groups_query['Response']['results'][0]['group']['groupId']
+                        player_clan_name = player_groups_query['Response']['results'][0]['group']['name']
+                    else:
+                        player_clan_id = None
+                        player_clan_name = None
 
-            # Add their bungie id and name to the records
-            user_data.update({'bungie_id': str(verify_id)})
-            user_data.update(
-                {'bungie_name': str(profile_data['Response']['profile']['data']['userInfo']['displayName'])})
+                    # Add their discord ID and name to the records
+                    user_data.update({'discord_id': str(ctx.author.id)})
 
-            # Add their clan info
-            if player_clan_name:
-                user_data.update({'clan_name': player_clan_name})
-                user_data.update({'clan_id': player_clan_id})
+                    if hasattr(ctx.author, 'nick'):
+                        user_data.update({'discord_name': str(ctx.author.nick)})
+                    else:
+                        user_data.update({'discord_name': str(ctx.author.display_name)})
 
-            # Set time created
-            user_data.update({'created_at': str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))})
+                    # Add their bungie id and name to the records
+                    user_data.update({'bungie_id': str(verify_id)})
+                    user_data.update(
+                        {'bungie_name': str(profile_data['Response']['profile']['data']['userInfo']['displayName'])})
 
-            # Complete the record with null values for now
-            user_data.update({'steam_join_id': '0'})
-            user_data.update({'clan_activity_score': 0})
-            user_data.update({'reports_below_threshold': 0})
-            user_data.update({'chat_events': 0})
-            user_data.update({'characters_typed': 0})
-            user_data.update({'vc_minutes': 0})
-            user_data.update({'game_activity': {}})
-            user_data.update({'seconds_played': 0})
-            user_data.update({'unique_clan_members_played_with': 0})
-            user_data.update({'clan_members_played_with': 0})
+                    # Add their clan info
+                    if player_clan_name:
+                        user_data.update({'clan_name': player_clan_name})
+                        user_data.update({'clan_id': player_clan_id})
 
-            if os.path.isfile(config.BOT_DB + str(ctx.author.id) + ".json"):
-                await ctx.author.send("Profile already registered. Contact an admin.")
-            else:
-                with open(config.BOT_DB + str(ctx.author.id) + ".json", 'w+') as user_file:
-                    json.dump(user_data, user_file)
+                    # Set time created
+                    user_data.update({'created_at': str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))})
 
-                await ctx.author.send("You are registered!")
+                    # Complete the record with null values for now
+                    user_data.update({'steam_join_id': '0'})
+                    user_data.update({'clan_activity_score': 0})
+                    user_data.update({'reports_below_threshold': 0})
+                    user_data.update({'chat_events': 0})
+                    user_data.update({'characters_typed': 0})
+                    user_data.update({'vc_minutes': 0})
+                    user_data.update({'game_activity': {}})
+                    user_data.update({'seconds_played': 0})
+                    user_data.update({'unique_clan_members_played_with': 0})
+                    user_data.update({'clan_members_played_with': 0})
+
+                    if os.path.isfile(config.BOT_DB + str(ctx.author.id) + ".json"):
+                        await ctx.author.send("Profile already registered. Contact an admin.")
+                    else:
+                        with open(config.BOT_DB + str(ctx.author.id) + ".json", 'w+') as user_file:
+                            json.dump(user_data, user_file)
+
+                        await ctx.author.send("You are registered!")
+
+                    break
 
         await destiny.close()
 
