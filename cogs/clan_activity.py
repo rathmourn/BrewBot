@@ -168,8 +168,6 @@ class ClanActivity(commands.Cog):
         characters_typed = 0
         today = datetime.datetime.utcnow()
 
-        print("[*] >>> Getting discord stats for ID:" + discord_id)
-
         for guild in self.bot.guilds:
             # Only do Ace's Brew Discord
             if str(guild.id) == "534781834924523520":
