@@ -58,8 +58,9 @@ class BackgroundTasks(commands.Cog):
                 with open(config.BOT_DB + user_file) as user_file_data:
                     user_data = json.load(user_file_data)
 
-                print("[*] >>> BACKGROUND: Updating {}'s stats...".format(user_data['bungie_name']))
-                # Discord Stats Update
+                print("[*] >>> BACKGROUND: Updating to {}'s stats...".format(user_data['bungie_name']))
+
+                # Calculate discord stats
                 discord_stats = await activity_manager.get_user_discord_activity_stats(user_data['discord_id'])
 
                 # Update the data in the user's record
@@ -67,20 +68,62 @@ class BackgroundTasks(commands.Cog):
                 user_data['characters_typed'] = discord_stats['characters_typed']
                 user_data['vc_minutes'] = discord_stats['vc_minutes']
 
+                # Calculate bungie stats
+                daily_bungie_stats = {}
 
-                # Bungie Stats
-                bungie_stats = await activity_manager.get_user_bungie_activity_stats(user_data['bungie_id'])
+                today_utc = datetime.datetime.utcnow()
+                reporting_period = (today_utc - datetime.timedelta(config.STATISTICS_PERIOD))
+
+                iter_date = reporting_period
+
+                while iter_date <= today_utc:
+                    print(iter_date)
+
+                    # See if we have stats already for that date (repull yesterday and today to make sure we get them all)
+                    today_report = today_utc.strftime("%Y-%m-%d")
+                    yesterday_report = (today_utc - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+
+                    if iter_date.strftime("%Y-%m-%d") in user_data['game_activity'].keys() and iter_date.strftime("%Y-%m-%d") != today_report and iter_date.strftime("%Y-%m-%d") != yesterday_report:
+                        daily_bungie_stats.update(
+                            {
+                                iter_date.strftime("%Y-%m-%d"): user_data['game_activity'][iter_date.strftime("%Y-%m-%d")]
+                            }
+                        )
+
+                    # If we don't, get them
+                    else:
+                        bungie_stats = await activity_manager.get_user_bungie_activity_stats(user_data['bungie_id'], iter_date)
+
+                        daily_bungie_stats.update(
+                            {
+                                iter_date.strftime("%Y-%m-%d"): {
+                                    "seconds_played": bungie_stats['seconds_played'],
+                                    "unique_clan_members_played_with": bungie_stats['unique_clan_members_played_with'],
+                                    "clan_members_played_with": bungie_stats['clan_members_played_with']
+                                }
+                            }
+                        )
+
+                    iter_date = iter_date + datetime.timedelta(days=1)
 
                 # Update the data in the user's record.
-                user_data['seconds_played'] = bungie_stats['seconds_played']
-                user_data['clan_members_played_with'] = bungie_stats['clan_members_played_with']
-                user_data['unique_clan_members_played_with'] = bungie_stats['unique_clan_members_played_with']
+                user_data['game_activity'] = daily_bungie_stats
 
-                # Calculate Scores and update
-                bonus_multiplier = user_data['unique_clan_members_played_with'] + user_data[
-                    'clan_members_played_with']
-                user_data['clan_activity_score'] = user_data['seconds_played'] + (user_data['chat_events'] * 60) + \
-                                                   (user_data['characters_typed'] * 3) * bonus_multiplier
+
+                total_seconds_played = 0
+                total_unique_members_played_with = 0
+                total_clan_members_played_with = 0
+
+                for stat_day, stat_values in user_data['game_activity'].items():
+                    total_seconds_played += user_data['game_activity'][stat_day]['seconds_played']
+                    total_unique_members_played_with += user_data['game_activity'][stat_day]['unique_clan_members_played_with']
+                    total_clan_members_played_with += user_data['game_activity'][stat_day]['clan_members_played_with']
+
+                bonus_multiplier = total_clan_members_played_with + total_unique_members_played_with
+                activity_score = total_seconds_played + (user_data['chat_events'] * 60) + \
+                                               (user_data['characters_typed'] * 3) * bonus_multiplier
+
+                user_data['clan_activity_score'] = activity_score
 
                 with open(config.BOT_DB + user_file, 'w') as user_file_data:
                     json.dump(user_data, user_file_data)

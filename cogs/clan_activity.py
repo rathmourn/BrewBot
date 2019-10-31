@@ -1,4 +1,5 @@
 import datetime
+from dateutil import tz
 import os
 import json
 from discord.ext import commands
@@ -28,13 +29,6 @@ class ClanActivity(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-
-
-    @commands.command(hidden=True)
-    @is_authorized()
-    async def ctest(self, ctx, profile_name):
-        print(self.bot.guilds)
-
 
     @commands.command(hidden=True)
     @is_authorized()
@@ -156,7 +150,7 @@ class ClanActivity(commands.Cog):
 
                     iter_date = reporting_period
 
-                    while iter_date <= today_utc:
+                    while iter_date < today_utc:
                         print(iter_date)
 
                         # See if we have stats already for that date
@@ -186,8 +180,6 @@ class ClanActivity(commands.Cog):
                             )
 
                         iter_date = iter_date + datetime.timedelta(days=1)
-
-                    print(daily_bungie_stats)
 
                     # Update the data in the user's record.
                     user_data['game_activity'] = daily_bungie_stats
