@@ -77,13 +77,23 @@ class ClanActivity(commands.Cog):
                     with open(config.BOT_DB + str(ctx.author.id) + ".json") as user_data_file:
                         user_data = json.load(user_data_file)
                 else:
-                    for user_file in os.listdir("users/"):
-                        with open(config.BOT_DB + str(user_file)) as user_data_file:
-                            user_data = json.load(user_data_file)
+                    for user_file in os.listdir(config.BOT_DB):
+                        if user_file.endswith(".json"):
+                            print(user_file)
+                            with open(config.BOT_DB + user_file) as user_data_file:
+                                user_data = json.load(user_data_file)
 
-                        if str(user_data['discord_name']).lower() == search_entity or str(user_data['bungie_name']).lower() == search_entity:
-                            break
+                            if str(user_data['discord_name']).lower() == search_entity or str(user_data['bungie_name']).lower() == search_entity:
+                                print("File matched.")
+                                break
 
+                total_seconds_played = 0
+                total_unique_members_played_with = 0
+
+                for stat_day, stat_values in user_data['game_activity'].items():
+                    total_seconds_played += user_data['game_activity'][stat_day]['seconds_played']
+                    total_unique_members_played_with += user_data['game_activity'][stat_day][
+                        'unique_clan_members_played_with']
 
                 embed = discord.Embed(title="Clan Activity Report",
                                       description="{}'s activity score over the last {} days".format(user_data['bungie_name'], config.STATISTICS_PERIOD))
@@ -91,10 +101,10 @@ class ClanActivity(commands.Cog):
                 embed.add_field(name="Discord Messages", value=user_data['chat_events'], inline=True)
                 embed.add_field(name="Discord Characters Sent", value=user_data['characters_typed'], inline=True)
                 embed.add_field(name="Destiny Time Played",
-                                value=str(datetime.timedelta(seconds=user_data['seconds_played'])), inline=False)
-                embed.add_field(name="Different Clan Members Played With ", value=user_data['unique_clan_members_played_with'],
+                                value=str(datetime.timedelta(seconds=total_seconds_played)), inline=False)
+                embed.add_field(name="Clan Members Played With ", value=str(total_unique_members_played_with),
                                 inline=True)
-                embed.add_field(name="Total Activity Score", value=int(user_data['clan_activity_score']), inline=False)
+                embed.add_field(name="Total Activity Score", value=str(int(user_data['clan_activity_score'])), inline=False)
 
                 await ctx.send(embed=embed)
             except FileNotFoundError:
@@ -130,8 +140,6 @@ class ClanActivity(commands.Cog):
                 await ctx.send("Updating {}'s stats...".format(user_data['bungie_name']))
 
                 # Calculate discord stats
-                print("[*] Getting stats for {}".format(user_data['discord_name']))
-
                 with ctx.typing():
                     discord_stats = await self.get_user_discord_activity_stats(user_data['discord_id'])
 
@@ -140,21 +148,66 @@ class ClanActivity(commands.Cog):
                     user_data['characters_typed'] = discord_stats['characters_typed']
                     user_data['vc_minutes'] = discord_stats['vc_minutes']
 
-                print("[*] >>> Getting stats for {}".format(user_data['bungie_id']))
-
                 with ctx.typing():
-                    bungie_stats = await self.get_user_bungie_activity_stats(user_data['bungie_id'])
+                    daily_bungie_stats = {}
+
+                    today_utc = datetime.datetime.utcnow()
+                    reporting_period = (today_utc - datetime.timedelta(config.STATISTICS_PERIOD))
+
+                    iter_date = reporting_period
+
+                    while iter_date <= today_utc:
+                        print(iter_date)
+
+                        # See if we have stats already for that date
+                        if iter_date.strftime("%Y-%m-%d") in user_data['game_activity'].keys():
+                            print("We have stats for this day.")
+
+                            daily_bungie_stats.update(
+                                {
+                                    iter_date.strftime("%Y-%m-%d"): user_data['game_activity'][iter_date.strftime("%Y-%m-%d")]
+                                }
+                            )
+
+                        # If we don't, get them
+                        else:
+                            print("No stats. Getting them...")
+
+                            bungie_stats = await self.get_user_bungie_activity_stats(user_data['bungie_id'], iter_date)
+
+                            daily_bungie_stats.update(
+                                {
+                                    iter_date.strftime("%Y-%m-%d"): {
+                                        "seconds_played": bungie_stats['seconds_played'],
+                                        "unique_clan_members_played_with": bungie_stats['unique_clan_members_played_with'],
+                                        "clan_members_played_with": bungie_stats['clan_members_played_with']
+                                    }
+                                }
+                            )
+
+                        iter_date = iter_date + datetime.timedelta(days=1)
+
+                    print(daily_bungie_stats)
 
                     # Update the data in the user's record.
-                    user_data['seconds_played'] = bungie_stats['seconds_played']
-                    user_data['clan_members_played_with'] = bungie_stats['clan_members_played_with']
-                    user_data['unique_clan_members_played_with'] = bungie_stats['unique_clan_members_played_with']
+                    user_data['game_activity'] = daily_bungie_stats
+
 
                 with ctx.typing():
-                    bonus_multiplier = user_data['unique_clan_members_played_with'] + user_data[
-                        'clan_members_played_with']
-                    user_data['clan_activity_score'] = user_data['seconds_played'] + (user_data['chat_events'] * 60) + \
-                                                       (user_data['characters_typed'] * 3) * bonus_multiplier
+                    total_seconds_played = 0
+                    total_unique_members_played_with = 0
+                    total_clan_members_played_with = 0
+
+                    for stat_day, stat_values in user_data['game_activity'].items():
+                        total_seconds_played += user_data['game_activity'][stat_day]['seconds_played']
+                        total_unique_members_played_with += user_data['game_activity'][stat_day]['unique_clan_members_played_with']
+                        total_clan_members_played_with += user_data['game_activity'][stat_day]['clan_members_played_with']
+
+                    bonus_multiplier = total_clan_members_played_with + total_unique_members_played_with
+                    activity_score = total_seconds_played + (user_data['chat_events'] * 60) + \
+                                                   (user_data['characters_typed'] * 3) * bonus_multiplier
+
+                    user_data['clan_activity_score'] = activity_score
 
                     with open(config.BOT_DB + user_file, 'w') as user_file_data:
                         json.dump(user_data, user_file_data)
@@ -186,7 +239,7 @@ class ClanActivity(commands.Cog):
 
         return stat_results
 
-    async def get_user_bungie_activity_stats(self, bungie_id):
+    async def get_user_bungie_activity_stats(self, bungie_id, day_to_pull):
         stat_results = {}
         today_utc = datetime.datetime.utcnow()
         days_before = config.STATISTICS_PERIOD
@@ -205,8 +258,8 @@ class ClanActivity(commands.Cog):
             pull_more_reports = True
             report_page = 0
             while pull_more_reports:
-                # Pull the first 25 activities for the characters
-                history_report = await destiny.api.get_activity_history(3, bungie_id, character_id, count=25, mode=None,
+                # Pull the first 100 activities for the characters
+                history_report = await destiny.api.get_activity_history(3, bungie_id, character_id, count=100, mode=None,
                                                                         page=report_page)
 
                 # Increment the page count if we loop back
@@ -217,7 +270,8 @@ class ClanActivity(commands.Cog):
                     activity_time = datetime.datetime.strptime(character_activity['period'], '%Y-%m-%dT%H:%M:%SZ')
 
                     # If the activity is within the reporting period; process it
-                    if activity_time > reporting_period:
+                    if activity_time.date() == day_to_pull.date():
+                        print("Pulling activity {}".format(activity_time))
                         # Calculate seconds played
                         seconds_played += character_activity['values']['timePlayedSeconds']['basic']['value']
                         activity_info = await destiny.api.get_post_game_carnage_report(
@@ -242,10 +296,10 @@ class ClanActivity(commands.Cog):
                             clan_members_played_with += 2.9
                         else:
                             clan_members_played_with += activity_clan_player_count
-                    # Else if its not, don't, and set the iteration flag to be complete
-                    else:
+                    elif activity_time.date() < day_to_pull.date():
                         pull_more_reports = False
                         break
+
 
         stat_results.update({"seconds_played": seconds_played})
         stat_results.update({"clan_members_played_with": clan_members_played_with})

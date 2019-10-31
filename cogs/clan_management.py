@@ -233,6 +233,7 @@ class ClanManagement(commands.Cog):
             user_data.update({'chat_events': 0})
             user_data.update({'characters_typed': 0})
             user_data.update({'vc_minutes': 0})
+            user_data.update({'game_activity': {}})
             user_data.update({'seconds_played': 0})
             user_data.update({'unique_clan_members_played_with': 0})
             user_data.update({'clan_members_played_with': 0})

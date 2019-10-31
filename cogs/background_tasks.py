@@ -12,8 +12,8 @@ class BackgroundTasks(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-        self.clan_roster_update.start()
-        self.clan_activity_update.start()
+        #self.clan_roster_update.start()
+        #self.clan_activity_update.start()
 
     def cog_unload(self):
         self.clan_roster_update.cancel()
