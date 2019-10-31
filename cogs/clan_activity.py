@@ -215,13 +215,15 @@ class ClanActivity(commands.Cog):
 
         for guild in self.bot.guilds:
             # Only do Ace's Brew Discord
-            if str(guild.id) == "534781834924523520":
+            if guild.id == 534781834924523520:
                 for channel in guild.text_channels:
+                    print(channel)
                     days_before = config.STATISTICS_PERIOD
                     reporting_period = today - datetime.timedelta(days_before)
 
-                    async for message in channel.history(after=reporting_period):
-                        if int(message.author.id) == int(discord_id):
+                    async for message in channel.history(limit=None, after=reporting_period):
+                        if str(message.author.id) == str(discord_id):
+                            print("MESSAGE FOUND: {}".format(channel))
                             chat_events += 1
                             characters_typed += len(message.content)
 

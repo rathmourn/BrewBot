@@ -192,13 +192,10 @@ class ClanManagement(commands.Cog):
                         member_registered = False
                         for registered_user in registered_users:
                             if clan_member['id'] == registered_user['bungie_id']:
-                                print("COMPARE: {} <=> {} found TRUE.".format(clan_member['id'],
-                                                                              registered_user['bungie_id']))
                                 member_registered = True
 
                         # If he was, we can ignore this one
                         if member_registered is False:
-                            print("Writing FALSE COMP: {}".format(clan_member['name']))
                             csv_writer.writerow([clan_member['name'], 'N/A', 'False', 'True', 'N/A', '0'])
 
                     # Upload the file to discord
@@ -215,7 +212,6 @@ class ClanManagement(commands.Cog):
 
             for clan in config.BREW_CLANS:
                 with open("clans/" + str(clan['clan_id']) + ".json") as clan_data_file:
-                    print("Loading {} : {}".format(clan['clan_name'], clan['clan_id']))
                     clan_data = json.load(clan_data_file)
                     embed.add_field(name=clan['clan_name'], value=str(len(clan_data['members'])), inline=False)
 
@@ -231,7 +227,6 @@ class ClanManagement(commands.Cog):
         with ctx.typing():
             for clan in config.BREW_CLANS:
                 clan_members = bungie_api.generate_clan_list(clan['clan_id'])
-                print(clan_members)
 
                 clan_data = {}
                 clan_data.update({'last_updated': str(datetime.datetime.utcnow())})
