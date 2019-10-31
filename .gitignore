@@ -4,3 +4,4 @@ _old/
 users/*.json
 clans/*.json
 config.py
+reports/*.csv

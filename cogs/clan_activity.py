@@ -93,8 +93,6 @@ class ClanActivity(commands.Cog):
                 embed.add_field(name="Discord Characters Sent", value=user_data['characters_typed'], inline=True)
                 embed.add_field(name="Destiny Time Played",
                                 value=str(datetime.timedelta(seconds=user_data['seconds_played'])), inline=False)
-                embed.add_field(name="Total Clan Members Played With", value=user_data['clan_members_played_with'],
-                                inline=True)
                 embed.add_field(name="Different Clan Members Played With ", value=user_data['unique_clan_members_played_with'],
                                 inline=True)
                 embed.add_field(name="Total Activity Score", value=int(user_data['clan_activity_score']), inline=False)
@@ -227,6 +225,7 @@ class ClanActivity(commands.Cog):
 
                         # See who they played with in that activity
                         activity_players = activity_info['Response']['entries']
+                        activity_clan_player_count = 0
 
                         for activity_player in activity_players:
                             player_id = activity_player['player']['destinyUserInfo']['membershipId']
@@ -236,9 +235,13 @@ class ClanActivity(commands.Cog):
                             clan_search_results = await self.check_if_clan_member(bungie_id=player_id)
 
                             if clan_search_results['is_member']:
-                                clan_members_played_with += 1
+                                activity_clan_player_count += 1
                                 unique_clan_members_played_with.add(player_id)
 
+                        if activity_clan_player_count > 2:
+                            clan_members_played_with += 2.9
+                        else:
+                            clan_members_played_with += activity_clan_player_count
                     # Else if its not, don't, and set the iteration flag to be complete
                     else:
                         pull_more_reports = False

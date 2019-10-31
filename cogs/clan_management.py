@@ -2,11 +2,13 @@ import os
 import discord
 from discord.ext import commands
 import json
+import csv
 import pydest
 import datetime
 
 import config
 import bungie_api
+
 
 def is_authorized():
     """
@@ -27,6 +29,77 @@ class ClanManagement(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+
+    @commands.command()
+    @is_authorized()
+    async def mtest(self, ctx):
+        for member in ctx.guild.members:
+            print(member.id)
+
+    @commands.command()
+    @is_authorized()
+    async def clan_report(self, ctx):
+        """Generate a clan report. [ADMIN ONLY]
+        """
+
+        with ctx.typing():
+
+            for clan in config.BREW_CLANS:
+                await ctx.send("Generating report for {}...".format(clan['clan_name']))
+
+                # Open the initial report file and write the header
+                report_file_name = str(clan['clan_name']).replace(" ", "_").replace("'", "") + ".csv"
+                with open("reports/" + report_file_name, 'w+') as csv_report:
+                    csv_writer = csv.writer(csv_report)
+                    csv_writer.writerow(
+                        ['steam_name', 'discord_name', 'registered?', 'in_clan?', 'in_discord?', 'activity_score'])
+
+                    registered_users = []
+
+                    # Iterate the registered users
+                    for registered_user in os.listdir(config.BOT_DB):
+                        with open(config.BOT_DB + registered_user) as user_data_file:
+                            user_data = json.load(user_data_file)
+
+                        # If they are in the current clan we care about
+                        if user_data['clan_id'] == clan['clan_id']:
+                            steam_name = user_data['bungie_name']
+                            discord_name = user_data['discord_name']
+                            is_registered = True
+
+                            clan_search_results = await self.check_if_clan_member(bungie_id=user_data['bungie_id'])
+                            is_in_clan = clan_search_results['is_member']
+
+                            activity_score = user_data['clan_activity_score']
+
+                            is_in_discord = False
+                            for member in ctx.guild.members:
+                                if str(member.id) == str(user_data['discord_id']):
+                                    is_in_discord = True
+
+                            csv_writer.writerow(
+                                [steam_name, discord_name, is_registered, is_in_clan, is_in_discord, int(activity_score)])
+
+                            registered_users.append(user_data)
+
+                    # Iterate the roster for all the unregistered folks
+                    with open("clans/" + str(clan['clan_id']) + ".json") as clan_data_file:
+                        clan_data = json.load(clan_data_file)
+
+                    for clan_member in clan_data['members']:
+
+                        # See if he was on our registered list
+                        member_registered = False
+                        for registered_user in registered_users:
+                            if clan_member['id'] == registered_user['bungie_id']:
+                                member_registered = True
+
+                        # If he was, we can ignore this one
+                        if member_registered is not True:
+                            csv_writer.writerow([clan_member['name'], 'N/A', 'False', 'True', 'N/A', '0'])
+
+                # Upload the file to discord
+                await ctx.send(file=discord.File("reports/" + report_file_name))
 
     @commands.command()
     async def roster_count(self, ctx):
@@ -93,7 +166,7 @@ class ClanManagement(commands.Cog):
 
                 await ctx.author.send("If you wish to finalize your registration please type:")
                 await ctx.author.send('Please type `{}register verify {}` to complete registration.'.format(
-                             config.BOT_COMMAND_PREFIX, clan_member['bungie_id']))
+                    config.BOT_COMMAND_PREFIX, clan_member['bungie_id']))
 
             else:
                 await ctx.send("You are not in our clan rosters. If your in-game name does not match your discord "
@@ -109,8 +182,9 @@ class ClanManagement(commands.Cog):
                 await ctx.send("Found you in the clan rosters. DM'ing you with further instructions.")
 
                 await ctx.author.send("If you wish to finalize your registration please type:")
-                await ctx.author.send('Please reply to this DM with `{}register verify {}` to complete registration.'.format(
-                    config.BOT_COMMAND_PREFIX, clan_member['bungie_id']))
+                await ctx.author.send(
+                    'Please reply to this DM with `{}register verify {}` to complete registration.'.format(
+                        config.BOT_COMMAND_PREFIX, clan_member['bungie_id']))
 
             else:
                 await ctx.send("You are not in our clan rosters. Please validate your membership before registering.")
@@ -206,7 +280,6 @@ class ClanManagement(commands.Cog):
                 break
 
         return return_results
-
 
 
 # Cog extension entry point
