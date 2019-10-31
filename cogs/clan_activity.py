@@ -33,9 +33,8 @@ class ClanActivity(commands.Cog):
     @commands.command(hidden=True)
     @is_authorized()
     async def ctest(self, ctx, profile_name):
-        results = await self.check_if_clan_member(profile_name=profile_name)
-        print(results)
-        await ctx.send(results)
+        print(self.bot.guilds)
+
 
     @commands.command(hidden=True)
     @is_authorized()
@@ -134,7 +133,7 @@ class ClanActivity(commands.Cog):
                 print("[*] Getting stats for {}".format(user_data['discord_name']))
 
                 with ctx.typing():
-                    discord_stats = await self.get_user_discord_activity_stats(ctx, user_data['discord_id'])
+                    discord_stats = await self.get_user_discord_activity_stats(user_data['discord_id'])
 
                     # Update the data in the user's record
                     user_data['chat_events'] = discord_stats['chat_events']
@@ -163,7 +162,7 @@ class ClanActivity(commands.Cog):
             print("[*] >>> Update complete.")
             await ctx.send("Update complete.")
 
-    async def get_user_discord_activity_stats(self, ctx, discord_id):
+    async def get_user_discord_activity_stats(self, discord_id):
         stat_results = {}
         chat_events = 0
         characters_typed = 0
@@ -171,14 +170,17 @@ class ClanActivity(commands.Cog):
 
         print("[*] >>> Getting discord stats for ID:" + discord_id)
 
-        for channel in ctx.guild.text_channels:
-            days_before = config.STATISTICS_PERIOD
-            reporting_period = today - datetime.timedelta(days_before)
+        for guild in self.bot.guilds:
+            # Only do Ace's Brew Discord
+            if str(guild.id) == "534781834924523520":
+                for channel in guild.text_channels:
+                    days_before = config.STATISTICS_PERIOD
+                    reporting_period = today - datetime.timedelta(days_before)
 
-            async for message in channel.history(after=reporting_period):
-                if int(message.author.id) == int(discord_id):
-                    chat_events += 1
-                    characters_typed += len(message.content)
+                    async for message in channel.history(after=reporting_period):
+                        if int(message.author.id) == int(discord_id):
+                            chat_events += 1
+                            characters_typed += len(message.content)
 
         stat_results.update({'characters_typed': int(characters_typed)})
         stat_results.update({'chat_events': int(chat_events)})

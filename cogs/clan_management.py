@@ -18,7 +18,13 @@ def is_authorized():
     """
 
     async def check_authorization(ctx):
-        return str(ctx.author.display_name) == "Rathmourn"
+        is_allowed = False
+        for role in ctx.author.roles:
+            if str(role.name) == "Mod" or str(role.name) == "Admin":
+                is_allowed = True
+                break
+
+        return is_allowed
 
     return commands.check(check_authorization)
 
@@ -29,12 +35,6 @@ class ClanManagement(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-
-    @commands.command()
-    @is_authorized()
-    async def mtest(self, ctx):
-        for member in ctx.guild.members:
-            print(member.id)
 
     @commands.command()
     @is_authorized()
