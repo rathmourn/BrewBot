@@ -1,5 +1,5 @@
 import os
-
+import discord
 from discord.ext import commands
 import json
 import pydest
@@ -29,35 +29,39 @@ class ClanManagement(commands.Cog):
         self.bot = bot
 
     @commands.command()
-    @is_authorized()
-    async def test(self, ctx, bungie_id):
-        results = await self.check_if_clan_member(profile_name=bungie_id)
-        print(results)
-        if results['is_member']:
-            await ctx.send("Is a clan member")
-            await ctx.send(results)
-        else:
-            await ctx.send("Is not a clan member")
-            await ctx.send(results)
+    async def roster_count(self, ctx):
+        """View clan roster counts.
+        """
 
+        with ctx.typing():
+            embed = discord.Embed(title="Clan Roster Counts",
+                                  description="Roster counts across all clans.")
+
+            for clan in config.BREW_CLANS:
+                with open("clans/" + str(clan['clan_id']) + ".json") as clan_data_file:
+                    print("Loading {} : {}".format(clan['clan_name'], clan['clan_id']))
+                    clan_data = json.load(clan_data_file)
+                    embed.add_field(name=clan['clan_name'], value=str(len(clan_data['members'])), inline=False)
+
+            await ctx.send(embed=embed)
 
     @commands.command()
     @is_authorized()
     async def roster_update(self, ctx):
-        """Updates the clan rosters.
+        """Updates the clan rosters. [ADMIN ONLY]
         """
         await ctx.send("Updating clan rosters...")
 
         with ctx.typing():
-            for clan_id in config.BREW_CLANS:
-                clan_members = bungie_api.generate_clan_list(clan_id)
+            for clan in config.BREW_CLANS:
+                clan_members = bungie_api.generate_clan_list(clan['clan_id'])
                 print(clan_members)
 
                 clan_data = {}
                 clan_data.update({'last_updated': str(datetime.datetime.utcnow())})
                 clan_data.update({'members': clan_members})
 
-                with open("clans/" + str(clan_id) + ".json", 'w+') as clan_data_file:
+                with open("clans/" + str(clan['clan_id']) + ".json", 'w+') as clan_data_file:
                     json.dump(clan_data, clan_data_file)
 
             await ctx.send("Rosters updated.")
@@ -95,8 +99,6 @@ class ClanManagement(commands.Cog):
                 await ctx.send("You are not in our clan rosters. If your in-game name does not match your discord "
                                "name try searching for it with `$register profile [name]`")
 
-
-
         # Register if discord name doesn't match
         elif args[0] == 'profile' and len(args) == 2:
 
@@ -107,7 +109,7 @@ class ClanManagement(commands.Cog):
                 await ctx.send("Found you in the clan rosters. DM'ing you with further instructions.")
 
                 await ctx.author.send("If you wish to finalize your registration please type:")
-                await ctx.author.send('Please type `{}register verify {}` to complete registration.'.format(
+                await ctx.author.send('Please reply to this DM with `{}register verify {}` to complete registration.'.format(
                     config.BOT_COMMAND_PREFIX, clan_member['bungie_id']))
 
             else:
@@ -183,23 +185,22 @@ class ClanManagement(commands.Cog):
         return_results['is_member'] = False
 
         for clan_roster in os.listdir("clans/"):
-            if clan_roster.split('.')[0] in config.BREW_CLANS:
-                with open("clans/" + clan_roster) as clan_data_file:
-                    clan_data = json.load(clan_data_file)
+            with open("clans/" + clan_roster) as clan_data_file:
+                clan_data = json.load(clan_data_file)
 
-                for member in clan_data['members']:
-                    if bungie_id is not None:
-                        if str(member['id']) == str(bungie_id):
-                            return_results['bungie_id'] = member['id']
-                            return_results['bungie_name'] = member['name']
-                            return_results['is_member'] = True
-                            break
-                    elif profile_name is not None:
-                        if str(member['name']).lower() == str(profile_name).lower():
-                            return_results['bungie_id'] = member['id']
-                            return_results['bungie_name'] = member['name']
-                            return_results['is_member'] = True
-                            break
+            for member in clan_data['members']:
+                if bungie_id is not None:
+                    if str(member['id']) == str(bungie_id):
+                        return_results['bungie_id'] = member['id']
+                        return_results['bungie_name'] = member['name']
+                        return_results['is_member'] = True
+                        break
+                elif profile_name is not None:
+                    if str(member['name']).lower() == str(profile_name).lower():
+                        return_results['bungie_id'] = member['id']
+                        return_results['bungie_name'] = member['name']
+                        return_results['is_member'] = True
+                        break
 
             if return_results['is_member']:
                 break

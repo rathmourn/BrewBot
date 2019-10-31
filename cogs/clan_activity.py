@@ -29,13 +29,15 @@ class ClanActivity(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command()
+
+    @commands.command(hidden=True)
     @is_authorized()
-    async def dtest(self, ctx, discord_id):
-        results = await self.get_user_discord_activity_stats(ctx, discord_id)
+    async def ctest(self, ctx, profile_name):
+        results = await self.check_if_clan_member(profile_name=profile_name)
+        print(results)
         await ctx.send(results)
 
-    @commands.command()
+    @commands.command(hidden=True)
     @is_authorized()
     async def api_dump(self, ctx, bungie_id):
         destiny = pydest.Pydest(config.BUNGIE_API_KEY)
@@ -46,7 +48,7 @@ class ClanActivity(commands.Cog):
 
         await destiny.close()
 
-    @commands.command()
+    @commands.command(hidden=True)
     @is_authorized()
     async def api_search(self, ctx, profile_name):
         destiny = pydest.Pydest(config.BUNGIE_API_KEY)
@@ -60,11 +62,13 @@ class ClanActivity(commands.Cog):
     @commands.command()
     async def activity(self, ctx, *args):
         """Give a user their activity stats.
+
+            If given no arguments, pulls the sender's stats.
+            Otherwise `$activity [user]` will attempt to pull that user's activity stats.
         """
 
         if len(args) > 0:
             search_entity = str(args[0]).lower()
-            print(search_entity)
         else:
             search_entity = None
 
@@ -89,28 +93,33 @@ class ClanActivity(commands.Cog):
                 embed.add_field(name="Discord Characters Sent", value=user_data['characters_typed'], inline=True)
                 embed.add_field(name="Destiny Time Played",
                                 value=str(datetime.timedelta(seconds=user_data['seconds_played'])), inline=False)
-                embed.add_field(name="Clan Members Played With", value=user_data['clan_members_played_with'],
+                embed.add_field(name="Total Clan Members Played With", value=user_data['clan_members_played_with'],
                                 inline=True)
-                embed.add_field(name="Unique Clan Members ", value=user_data['unique_clan_members_played_with'],
+                embed.add_field(name="Different Clan Members Played With ", value=user_data['unique_clan_members_played_with'],
                                 inline=True)
                 embed.add_field(name="Total Activity Score", value=int(user_data['clan_activity_score']), inline=False)
 
                 await ctx.send(embed=embed)
             except FileNotFoundError:
                 await ctx.send(
-                    "You do not appear to be registered. If you believe to be in error, please contact an admid.")
+                    "You do not appear to be registered. If you believe to be in error, please contact an admin.")
 
     @commands.command()
     @is_authorized()
     async def activity_update(self, ctx, *args):
-        """Update all registered users.
+        """Update activity stats and scores. [ADMIN ONLY]
+
+            No arguments will update everyone.
+            `$activity_update [user]` will attempt to update just that user.
         """
         if len(args) > 0:
             search_name = args[0]
             search_name = search_name.lower()
-            print(search_name)
         else:
-            search_name = None
+            if ctx.author.nick:
+                search_name = str(ctx.author.nick).lower()
+            else:
+                search_name = str(ctx.author.display_name).lower()
 
         for user_file in os.listdir(config.BOT_DB):
             if user_file.endswith(".json"):
@@ -121,8 +130,9 @@ class ClanActivity(commands.Cog):
                     if user_data['bungie_id'].lower() != search_name and user_data['bungie_name'].lower() != search_name and user_data['discord_name'].lower() != search_name:
                         continue
 
+                await ctx.send("Updating {}'s stats...".format(user_data['bungie_name']))
+
                 # Calculate discord stats
-                await ctx.send("Updating {} discord stats...".format(user_data['bungie_name']))
                 print("[*] Getting stats for {}".format(user_data['discord_name']))
 
                 with ctx.typing():
@@ -133,8 +143,6 @@ class ClanActivity(commands.Cog):
                     user_data['characters_typed'] = discord_stats['characters_typed']
                     user_data['vc_minutes'] = discord_stats['vc_minutes']
 
-                await ctx.send("Discord stats updated.")
-                await ctx.send("Updating {} bungie stats...".format(user_data['bungie_name']))
                 print("[*] >>> Getting stats for {}".format(user_data['bungie_id']))
 
                 with ctx.typing():
@@ -145,9 +153,6 @@ class ClanActivity(commands.Cog):
                     user_data['clan_members_played_with'] = bungie_stats['clan_members_played_with']
                     user_data['unique_clan_members_played_with'] = bungie_stats['unique_clan_members_played_with']
 
-                await ctx.send("Bungie stats updated.")
-                await ctx.send("Updating your record.")
-
                 with ctx.typing():
                     bonus_multiplier = user_data['unique_clan_members_played_with'] + user_data[
                         'clan_members_played_with']
@@ -157,11 +162,8 @@ class ClanActivity(commands.Cog):
                     with open(config.BOT_DB + user_file, 'w') as user_file_data:
                         json.dump(user_data, user_file_data)
 
-                await ctx.send("Record updated.")
-
-    @commands.command()
-    async def tools(self, ctx, bungie_id):
-        await self.get_user_bungie_activity_stats(bungie_id)
+            print("[*] >>> Update complete.")
+            await ctx.send("Update complete.")
 
     async def get_user_discord_activity_stats(self, ctx, discord_id):
         stat_results = {}
@@ -231,21 +233,11 @@ class ClanActivity(commands.Cog):
                             player_name = activity_player['player']['destinyUserInfo']['displayName']
 
                             # Find out if the players were in our clans
-                            player_groups_query = await destiny.api.get_groups_for_member(3, player_id)
+                            clan_search_results = await self.check_if_clan_member(bungie_id=player_id)
 
-                            if len(player_groups_query['Response']['results']) > 0:
-                                player_clan_id = player_groups_query['Response']['results'][0]['group']['groupId']
-                                player_clan_name = player_groups_query['Response']['results'][0]['group']['name']
-                            else:
-                                player_clan_id = None
-                                player_clan_name = None
-
-                            if player_clan_name:
-                                if str(player_clan_name).find("Ace's Brew") != -1:
-                                    # Make sure we don't count ourselves
-                                    if player_id != bungie_id:
-                                        clan_members_played_with += 1
-                                        unique_clan_members_played_with.add(player_id)
+                            if clan_search_results['is_member']:
+                                clan_members_played_with += 1
+                                unique_clan_members_played_with.add(player_id)
 
                     # Else if its not, don't, and set the iteration flag to be complete
                     else:
@@ -259,6 +251,40 @@ class ClanActivity(commands.Cog):
         await destiny.close()
         return stat_results
 
+    async def check_if_clan_member(self, bungie_id=None, profile_name=None):
+        """Checks the cached roster if member is in the clans.
+
+            Returns (dict):
+                            return_results['bungie_id'] = member['id']
+                            return_results['bungie_name'] = member['name']
+                            return_results['is_member'] = True
+        """
+        return_results = {}
+        return_results['is_member'] = False
+
+        for clan_roster in os.listdir("clans/"):
+            with open("clans/" + clan_roster) as clan_data_file:
+                clan_data = json.load(clan_data_file)
+
+            for member in clan_data['members']:
+                if bungie_id is not None:
+                    if str(member['id']) == str(bungie_id):
+                        return_results['bungie_id'] = member['id']
+                        return_results['bungie_name'] = member['name']
+                        return_results['is_member'] = True
+                        break
+
+                if profile_name is not None:
+                    if str(member['name']).lower() == str(profile_name).lower():
+                        return_results['bungie_id'] = member['id']
+                        return_results['bungie_name'] = member['name']
+                        return_results['is_member'] = True
+                        break
+
+            if return_results['is_member']:
+                break
+
+        return return_results
 
 # Cog extension entry point
 def setup(bot):
