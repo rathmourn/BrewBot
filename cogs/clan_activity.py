@@ -5,7 +5,7 @@ import json
 from discord.ext import commands
 import discord
 import pydest
-
+import time
 import config
 
 
@@ -35,7 +35,7 @@ class ClanActivity(commands.Cog):
     async def api_dump(self, ctx, bungie_id):
         destiny = pydest.Pydest(config.BUNGIE_API_KEY)
 
-        response = await destiny.api.get_profile(3, bungie_id, components=[100])
+        response = await destiny.api.get_profile(3, bungie_id, components=[100, 204])
         await ctx.send(response)
         print(response)
 
@@ -73,12 +73,11 @@ class ClanActivity(commands.Cog):
                 else:
                     for user_file in os.listdir(config.BOT_DB):
                         if user_file.endswith(".json"):
-                            print(user_file)
                             with open(config.BOT_DB + user_file) as user_data_file:
                                 user_data = json.load(user_data_file)
 
-                            if str(user_data['discord_name']).lower() == search_entity or str(user_data['bungie_name']).lower() == search_entity:
-                                print("File matched.")
+                            if str(user_data['discord_name']).lower() == search_entity or str(
+                                    user_data['bungie_name']).lower() == search_entity:
                                 break
 
                 total_seconds_played = 0
@@ -90,7 +89,8 @@ class ClanActivity(commands.Cog):
                         'unique_clan_members_played_with']
 
                 embed = discord.Embed(title="Clan Activity Report",
-                                      description="{}'s activity score over the last {} days".format(user_data['bungie_name'], config.STATISTICS_PERIOD))
+                                      description="{}'s activity score over the last {} days".format(
+                                          user_data['bungie_name'], config.STATISTICS_PERIOD))
 
                 embed.add_field(name="Discord Messages", value=user_data['chat_events'], inline=True)
                 embed.add_field(name="Discord Characters Sent", value=user_data['characters_typed'], inline=True)
@@ -98,7 +98,10 @@ class ClanActivity(commands.Cog):
                                 value=str(datetime.timedelta(seconds=total_seconds_played)), inline=False)
                 embed.add_field(name="Clan Members Played With ", value=str(total_unique_members_played_with),
                                 inline=True)
-                embed.add_field(name="Total Activity Score", value=str(int(user_data['clan_activity_score'])), inline=False)
+
+                clan_activity_score = int(user_data['clan_activity_score'])
+                embed.add_field(name="Total Activity Score", value=f"{clan_activity_score:,}",
+                                inline=False)
 
                 await ctx.send(embed=embed)
             except FileNotFoundError:
@@ -128,7 +131,8 @@ class ClanActivity(commands.Cog):
                     user_data = json.load(user_file_data)
 
                 if search_name is not None:
-                    if user_data['bungie_id'].lower() != search_name and user_data['bungie_name'].lower() != search_name and user_data['discord_name'].lower() != search_name:
+                    if user_data['bungie_id'].lower() != search_name and user_data[
+                        'bungie_name'].lower() != search_name and user_data['discord_name'].lower() != search_name:
                         continue
 
                 await ctx.send("Updating {}'s stats...".format(user_data['bungie_name']))
@@ -155,25 +159,23 @@ class ClanActivity(commands.Cog):
 
                         # See if we have stats already for that date
                         if iter_date.strftime("%Y-%m-%d") in user_data['game_activity'].keys():
-                            print("We have stats for this day.")
-
                             daily_bungie_stats.update(
                                 {
-                                    iter_date.strftime("%Y-%m-%d"): user_data['game_activity'][iter_date.strftime("%Y-%m-%d")]
+                                    iter_date.strftime("%Y-%m-%d"): user_data['game_activity'][
+                                        iter_date.strftime("%Y-%m-%d")]
                                 }
                             )
 
                         # If we don't, get them
                         else:
-                            print("No stats. Getting them...")
-
                             bungie_stats = await self.get_user_bungie_activity_stats(user_data['bungie_id'], iter_date)
 
                             daily_bungie_stats.update(
                                 {
                                     iter_date.strftime("%Y-%m-%d"): {
                                         "seconds_played": bungie_stats['seconds_played'],
-                                        "unique_clan_members_played_with": bungie_stats['unique_clan_members_played_with'],
+                                        "unique_clan_members_played_with": bungie_stats[
+                                            'unique_clan_members_played_with'],
                                         "clan_members_played_with": bungie_stats['clan_members_played_with']
                                     }
                                 }
@@ -184,7 +186,6 @@ class ClanActivity(commands.Cog):
                     # Update the data in the user's record.
                     user_data['game_activity'] = daily_bungie_stats
 
-
                 with ctx.typing():
                     total_seconds_played = 0
                     total_unique_members_played_with = 0
@@ -192,20 +193,22 @@ class ClanActivity(commands.Cog):
 
                     for stat_day, stat_values in user_data['game_activity'].items():
                         total_seconds_played += user_data['game_activity'][stat_day]['seconds_played']
-                        total_unique_members_played_with += user_data['game_activity'][stat_day]['unique_clan_members_played_with']
-                        total_clan_members_played_with += user_data['game_activity'][stat_day]['clan_members_played_with']
+                        total_unique_members_played_with += user_data['game_activity'][stat_day][
+                            'unique_clan_members_played_with']
+                        total_clan_members_played_with += user_data['game_activity'][stat_day][
+                            'clan_members_played_with']
 
                     bonus_multiplier = total_clan_members_played_with + total_unique_members_played_with
                     activity_score = total_seconds_played + (user_data['chat_events'] * 60) + \
-                                                   (user_data['characters_typed'] * 3) * bonus_multiplier
+                                     (user_data['characters_typed'] * 3) * bonus_multiplier
 
                     user_data['clan_activity_score'] = activity_score
 
                     with open(config.BOT_DB + user_file, 'w') as user_file_data:
                         json.dump(user_data, user_file_data)
 
-            print("[*] >>> Update complete.")
-            await ctx.send("Update complete.")
+                print("[*] >>> Update complete.")
+                await ctx.send("Update complete.")
 
     async def get_user_discord_activity_stats(self, discord_id):
         stat_results = {}
@@ -217,13 +220,11 @@ class ClanActivity(commands.Cog):
             # Only do Ace's Brew Discord
             if guild.id == 534781834924523520:
                 for channel in guild.text_channels:
-                    print(channel)
                     days_before = config.STATISTICS_PERIOD
                     reporting_period = today - datetime.timedelta(days_before)
 
                     async for message in channel.history(limit=None, after=reporting_period):
                         if str(message.author.id) == str(discord_id):
-                            print("MESSAGE FOUND: {}".format(channel))
                             chat_events += 1
                             characters_typed += len(message.content)
 
@@ -237,69 +238,105 @@ class ClanActivity(commands.Cog):
         stat_results = {}
         today_utc = datetime.datetime.utcnow()
         days_before = config.STATISTICS_PERIOD
-        reporting_period = (today_utc - datetime.timedelta(days_before))
         destiny = pydest.Pydest(config.BUNGIE_API_KEY)
+        profile_calls = 0
 
-        profile_data = await destiny.api.get_profile(3, bungie_id, components=['100'])
-        character_ids = profile_data['Response']['profile']['data']['characterIds']
+        profile_types = [3, 2, 1, 5]
+        member_type = None
 
-        seconds_played = 0
-        clan_members_played_with = 0
-        unique_clan_members_played_with = set()
+        for profile_type in profile_types:
+            profile_data = await destiny.api.get_profile(profile_type, bungie_id, components=['100'])
+            print(profile_data)
+            await self.debug_api_call(profile_data)
 
-        for character_id in character_ids:
-
-            pull_more_reports = True
-            report_page = 0
-            while pull_more_reports:
-                # Pull the first 100 activities for the characters
-                history_report = await destiny.api.get_activity_history(3, bungie_id, character_id, count=100, mode=None,
-                                                                        page=report_page)
-
-                # Increment the page count if we loop back
-                report_page += 1
-                character_activities = history_report['Response']['activities']
-
-                for character_activity in character_activities:
-                    activity_time = datetime.datetime.strptime(character_activity['period'], '%Y-%m-%dT%H:%M:%SZ')
-
-                    # If the activity is within the reporting period; process it
-                    if activity_time.date() == day_to_pull.date():
-                        print("Pulling activity {}".format(activity_time))
-                        # Calculate seconds played
-                        seconds_played += character_activity['values']['timePlayedSeconds']['basic']['value']
-                        activity_info = await destiny.api.get_post_game_carnage_report(
-                            character_activity['activityDetails']['instanceId'])
-
-                        # See who they played with in that activity
-                        activity_players = activity_info['Response']['entries']
-                        activity_clan_player_count = 0
-
-                        for activity_player in activity_players:
-                            player_id = activity_player['player']['destinyUserInfo']['membershipId']
-                            player_name = activity_player['player']['destinyUserInfo']['displayName']
-
-                            # Find out if the players were in our clans
-                            clan_search_results = await self.check_if_clan_member(bungie_id=player_id)
-
-                            if clan_search_results['is_member']:
-                                activity_clan_player_count += 1
-                                unique_clan_members_played_with.add(player_id)
-
-                        if activity_clan_player_count > 2:
-                            clan_members_played_with += 2.9
-                        else:
-                            clan_members_played_with += activity_clan_player_count
-                    elif activity_time.date() < day_to_pull.date():
-                        pull_more_reports = False
-                        break
+            if str(profile_data['ErrorCode']) == "1":
+                member_type = profile_type
 
 
-        stat_results.update({"seconds_played": seconds_played})
-        stat_results.update({"clan_members_played_with": clan_members_played_with})
-        stat_results.update({"unique_clan_members_played_with": len(unique_clan_members_played_with)})
+                character_ids = profile_data['Response']['profile']['data']['characterIds']
 
-        await destiny.close()
+                seconds_played = 0
+                clan_members_played_with = 0
+                unique_clan_members_played_with = set()
+                for character_id in character_ids:
+                    pull_more_reports = True
+                    report_page = 0
+
+                    while pull_more_reports:
+                        # Pull the first 100 activities for the characters
+
+                        history_report = await destiny.api.get_activity_history(member_type, bungie_id, character_id, count=25,
+                                                                                mode=None,
+                                                                                page=report_page)
+
+                        await self.debug_api_call(history_report)
+                        profile_calls += 1
+
+                        # If we don't get a response, we're done
+                        if len(history_report['Response']) == 0:
+                            pull_more_report = False
+                            break
+
+                        # See if it has any activities in it
+                        if 'activities' not in history_report['Response'].keys():
+                            break
+
+                        # Increment the page count if we loop back
+                        report_page += 1
+                        character_activities = history_report['Response']['activities']
+
+                        for character_activity in character_activities:
+                            activity_time = datetime.datetime.strptime(character_activity['period'], '%Y-%m-%dT%H:%M:%SZ')
+
+                            # If the activity is within the reporting period; process it
+                            if activity_time.date() == day_to_pull.date():
+                                # Calculate seconds played
+                                seconds_played += character_activity['values']['timePlayedSeconds']['basic']['value']
+                                activity_info = await destiny.api.get_post_game_carnage_report(
+                                    character_activity['activityDetails']['instanceId'])
+                                await self.debug_api_call(activity_info)
+
+                                if len(history_report['Response']) == 0:
+                                    pull_more_report = False
+                                    break
+
+                                # See who they played with in that activity
+                                activity_players = activity_info['Response']['entries']
+                                activity_clan_player_count = 0
+
+                                for activity_player in activity_players:
+
+                                    # Make sure it isn't the player getting stats pulled on
+                                    if str(activity_player['player']['destinyUserInfo']['membershipId']) != str(bungie_id):
+                                        if str(activity_player['player']['destinyUserInfo']['isPublic']) == "True":
+                                            player_name = activity_player['player']['destinyUserInfo']['displayName']
+                                        else:
+                                            player_name = "<PRIVATE>"
+
+                                        player_id = activity_player['player']['destinyUserInfo']['membershipId']
+                                        print("\t\t\tLOOKUP: {} : {}".format(player_name, player_id))
+                                        # Find out if the players were in our clans
+                                        clan_search_results = await self.check_if_clan_member(bungie_id=player_id)
+
+                                        if clan_search_results['is_member']:
+                                            activity_clan_player_count += 1
+                                            unique_clan_members_played_with.add(player_id)
+
+                                if activity_clan_player_count > 2:
+                                    clan_members_played_with += 2.9
+                                else:
+                                    clan_members_played_with += activity_clan_player_count
+                            elif activity_time.date() < day_to_pull.date():
+                                pull_more_reports = False
+                                break
+
+                await destiny.close()
+                stat_results.update({"seconds_played": seconds_played})
+                stat_results.update({"clan_members_played_with": clan_members_played_with})
+                stat_results.update({"unique_clan_members_played_with": len(unique_clan_members_played_with)})
+
+                break
+
         return stat_results
 
     async def check_if_clan_member(self, bungie_id=None, profile_name=None):
@@ -336,6 +373,18 @@ class ClanActivity(commands.Cog):
                 break
 
         return return_results
+
+    async def debug_api_call(self, api_response):
+        #if api_response['ErrorCode'] != 1:
+        time_now = datetime.datetime.utcnow()
+        print("{}: ErrorCode: {}, ThrottleSeconds: {}, Message: {}, MessageData: {}".format(time_now, api_response['ErrorCode'],
+                                                                                            api_response[
+                                                                                                'ThrottleSeconds'],
+                                                                                            api_response['Message'],
+                                                                                            api_response[
+                                                                                                'MessageData']))
+        #print("\t\tRESPONSE: {}".format(api_response['Response']))
+
 
 # Cog extension entry point
 def setup(bot):

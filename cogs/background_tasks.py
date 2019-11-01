@@ -72,18 +72,15 @@ class BackgroundTasks(commands.Cog):
                 daily_bungie_stats = {}
 
                 today_utc = datetime.datetime.utcnow()
-                reporting_period = (today_utc - datetime.timedelta(config.STATISTICS_PERIOD))
+                reporting_period = (today_utc - datetime.timedelta(days=(int(config.STATISTICS_PERIOD) + 1)))
 
                 iter_date = reporting_period
 
-                while iter_date <= today_utc:
+                while iter_date < today_utc:
                     print(iter_date)
 
-                    # See if we have stats already for that date (repull yesterday and today to make sure we get them all)
-                    today_report = today_utc.strftime("%Y-%m-%d")
-                    yesterday_report = (today_utc - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-
-                    if iter_date.strftime("%Y-%m-%d") in user_data['game_activity'].keys() and iter_date.strftime("%Y-%m-%d") != today_report and iter_date.strftime("%Y-%m-%d") != yesterday_report:
+                    # See if we have stats already for that date (we don't pull current day))
+                    if iter_date.strftime("%Y-%m-%d") in user_data['game_activity'].keys(): # and iter_date.strftime("%Y-%m-%d") != today_report: # and iter_date.strftime("%Y-%m-%d") != yesterday_report:
                         daily_bungie_stats.update(
                             {
                                 iter_date.strftime("%Y-%m-%d"): user_data['game_activity'][iter_date.strftime("%Y-%m-%d")]
@@ -133,7 +130,7 @@ class BackgroundTasks(commands.Cog):
         print("[*] >>> Updating clan activity scores updated in background complete!")
 
 
-    @clan_roster_update.before_loop
+    @clan_activity_update.before_loop
     async def before_clan_activity_update(self):
         print("Waiting to start clan activity updater until bot is ready...")
         await self.bot.wait_until_ready()
