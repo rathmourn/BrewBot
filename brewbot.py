@@ -32,6 +32,7 @@ class BrewBot(discord.ext.commands.Bot):
         """
         await super().process_commands(message)
         #print(str(message.guild) + " : " + str(message.channel) + " : " + str(message.author))
+        #
 
     async def on_ready(self):
         """
