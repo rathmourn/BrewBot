@@ -21,9 +21,9 @@ def destiny2_api_public(url, api_key):
 
 
 class ResponseSummary:
-    '''
+    """
     Object contains all the important information about the request sent to bungie.
-    '''
+    """
 
     def __init__(self, response):
         self.status = response.status_code

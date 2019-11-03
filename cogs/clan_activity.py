@@ -30,83 +30,45 @@ class ClanActivity(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(hidden=True)
-    @is_authorized()
-    async def api_dump(self, ctx, bungie_id):
-        destiny = pydest.Pydest(config.BUNGIE_API_KEY)
-
-        response = await destiny.api.get_profile(3, bungie_id, components=[100, 204])
-        await ctx.send(response)
-        print(response)
-
-        await destiny.close()
-
-    @commands.command(hidden=True)
-    @is_authorized()
-    async def api_search(self, ctx, profile_name):
-        destiny = pydest.Pydest(config.BUNGIE_API_KEY)
-
-        response = await destiny.api.search_destiny_player(3, profile_name)
-        await ctx.send(response)
-        print(response)
-
-        await destiny.close()
-
     @commands.command()
-    async def activity(self, ctx, *args):
+    async def activity(self, ctx):
         """Give a user their activity stats.
 
             If given no arguments, pulls the sender's stats.
             Otherwise `$activity [user]` will attempt to pull that user's activity stats.
         """
 
-        if len(args) > 0:
-            search_entity = str(args[0]).lower()
-        else:
-            search_entity = None
-
         with ctx.typing():
-            try:
-                if search_entity is None:
+            # If we are just looking up the author's stats
+            print(ctx.message.mentions)
+            if len(ctx.message.mentions) == 0:
+                try:
                     with open(config.BOT_DB + str(ctx.author.id) + ".json") as user_data_file:
                         user_data = json.load(user_data_file)
-                else:
-                    for user_file in os.listdir(config.BOT_DB):
-                        if user_file.endswith(".json"):
-                            with open(config.BOT_DB + user_file) as user_data_file:
-                                user_data = json.load(user_data_file)
 
-                            if str(user_data['discord_name']).lower() == search_entity or str(
-                                    user_data['bungie_name']).lower() == search_entity:
-                                break
+                        report_message = self._print_activity_report(user_data)
+                        await ctx.send(embed=report_message)
 
-                total_seconds_played = 0
-                total_unique_members_played_with = 0
+                except FileNotFoundError:
+                    await ctx.send("You do not appear to be registered with me.")
+                    return
 
-                for stat_day, stat_values in user_data['game_activity'].items():
-                    total_seconds_played += user_data['game_activity'][stat_day]['seconds_played']
-                    total_unique_members_played_with += user_data['game_activity'][stat_day][
-                        'unique_clan_members_played_with']
+            # Else, we need to find the user they are looking for
+            else:
+                for mention in ctx.message.mentions:
+                    try:
+                        with open(config.BOT_DB + str(mention.id) + ".json") as user_data_file:
+                            user_data = json.load(user_data_file)
 
-                embed = discord.Embed(title="Clan Activity Report",
-                                      description="{}'s activity score over the last {} days".format(
-                                          user_data['bungie_name'], config.STATISTICS_PERIOD))
+                            report_message = self._print_activity_report(user_data)
+                            await ctx.send(embed=report_message)
 
-                embed.add_field(name="Discord Messages", value=user_data['chat_events'], inline=True)
-                embed.add_field(name="Discord Characters Sent", value=user_data['characters_typed'], inline=True)
-                embed.add_field(name="Destiny Time Played",
-                                value=str(datetime.timedelta(seconds=total_seconds_played)), inline=False)
-                embed.add_field(name="Clan Members Played With ", value=str(total_unique_members_played_with),
-                                inline=True)
-
-                clan_activity_score = int(user_data['clan_activity_score'])
-                embed.add_field(name="Total Activity Score", value=f"{clan_activity_score:,}",
-                                inline=False)
-
-                await ctx.send(embed=embed)
-            except FileNotFoundError:
-                await ctx.send(
-                    "You do not appear to be registered. If you believe to be in error, please contact an admin.")
+                    except FileNotFoundError:
+                        await ctx.send(
+                            "Unable to find stats for {} among my registered members. Please verify the name and "
+                            "search again.".format(
+                                mention.mention))
+                        return
 
     @commands.command()
     @is_authorized()
@@ -252,7 +214,6 @@ class ClanActivity(commands.Cog):
             if str(profile_data['ErrorCode']) == "1":
                 member_type = profile_type
 
-
                 character_ids = profile_data['Response']['profile']['data']['characterIds']
 
                 seconds_played = 0
@@ -265,7 +226,8 @@ class ClanActivity(commands.Cog):
                     while pull_more_reports:
                         # Pull the first 100 activities for the characters
 
-                        history_report = await destiny.api.get_activity_history(member_type, bungie_id, character_id, count=25,
+                        history_report = await destiny.api.get_activity_history(member_type, bungie_id, character_id,
+                                                                                count=25,
                                                                                 mode=None,
                                                                                 page=report_page)
 
@@ -286,7 +248,8 @@ class ClanActivity(commands.Cog):
                         character_activities = history_report['Response']['activities']
 
                         for character_activity in character_activities:
-                            activity_time = datetime.datetime.strptime(character_activity['period'], '%Y-%m-%dT%H:%M:%SZ')
+                            activity_time = datetime.datetime.strptime(character_activity['period'],
+                                                                       '%Y-%m-%dT%H:%M:%SZ')
 
                             # If the activity is within the reporting period; process it
                             if activity_time.date() == day_to_pull.date():
@@ -307,7 +270,8 @@ class ClanActivity(commands.Cog):
                                 for activity_player in activity_players:
 
                                     # Make sure it isn't the player getting stats pulled on
-                                    if str(activity_player['player']['destinyUserInfo']['membershipId']) != str(bungie_id):
+                                    if str(activity_player['player']['destinyUserInfo']['membershipId']) != str(
+                                            bungie_id):
                                         if str(activity_player['player']['destinyUserInfo']['isPublic']) == "True":
                                             player_name = activity_player['player']['destinyUserInfo']['displayName']
                                         else:
@@ -374,16 +338,44 @@ class ClanActivity(commands.Cog):
 
         return return_results
 
+    def _print_activity_report(self, user_data):
+        total_seconds_played = 0
+        total_unique_members_played_with = 0
+
+        for stat_day, stat_values in user_data['game_activity'].items():
+            total_seconds_played += user_data['game_activity'][stat_day]['seconds_played']
+            total_unique_members_played_with += user_data['game_activity'][stat_day][
+                'unique_clan_members_played_with']
+
+        embed = discord.Embed(title="Clan Activity Report",
+                              description="{}'s activity score over the last {} days".format(
+                                  user_data['bungie_name'], config.STATISTICS_PERIOD))
+
+        embed.add_field(name="Discord Messages", value=user_data['chat_events'], inline=True)
+        embed.add_field(name="Discord Characters Sent", value=user_data['characters_typed'], inline=True)
+        embed.add_field(name="Destiny Time Played",
+                        value=str(datetime.timedelta(seconds=total_seconds_played)), inline=False)
+        embed.add_field(name="Clan Members Played With ", value=str(total_unique_members_played_with),
+                        inline=True)
+
+        clan_activity_score = int(user_data['clan_activity_score'])
+        embed.add_field(name="Total Activity Score", value=f"{clan_activity_score:,}",
+                        inline=False)
+
+        return embed
+
     async def debug_api_call(self, api_response):
-        #if api_response['ErrorCode'] != 1:
+        # if api_response['ErrorCode'] != 1:
         time_now = datetime.datetime.utcnow()
-        print("{}: ErrorCode: {}, ThrottleSeconds: {}, Message: {}, MessageData: {}".format(time_now, api_response['ErrorCode'],
+        print("{}: ErrorCode: {}, ThrottleSeconds: {}, Message: {}, MessageData: {}".format(time_now,
+                                                                                            api_response['ErrorCode'],
                                                                                             api_response[
                                                                                                 'ThrottleSeconds'],
                                                                                             api_response['Message'],
                                                                                             api_response[
                                                                                                 'MessageData']))
-        #print("\t\tRESPONSE: {}".format(api_response['Response']))
+        if 'Response' in api_response.keys():
+            print("\t\tRESPONSE: {}".format(api_response['Response']))
 
 
 # Cog extension entry point
