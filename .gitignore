@@ -1,3 +1,4 @@
+__pycache__/
 .idea/
 .vscode/
 venv/
@@ -6,3 +7,4 @@ users/*.json
 clans/*.json
 config.py
 reports/*.csv
+.DS_Store
