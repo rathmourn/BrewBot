@@ -212,6 +212,14 @@ class ClanActivity(commands.Cog):
             await self.debug_api_call(profile_data)
 
             if str(profile_data['ErrorCode']) == "1":
+
+                # See if their profile is set to private
+                if str(profile_data['Response']['profile']['privacy']) == "1":
+                    stat_results.update({"seconds_played": 0})
+                    stat_results.update({"clan_members_played_with": 0})
+                    stat_results.update({"unique_clan_members_played_with": 0})
+                    break
+
                 member_type = profile_type
 
                 character_ids = profile_data['Response']['profile']['data']['characterIds']
@@ -232,7 +240,6 @@ class ClanActivity(commands.Cog):
                                                                                 page=report_page)
 
                         await self.debug_api_call(history_report)
-                        profile_calls += 1
 
                         # If we don't get a response, we're done
                         if len(history_report['Response']) == 0:
@@ -294,13 +301,25 @@ class ClanActivity(commands.Cog):
                                 pull_more_reports = False
                                 break
 
-                await destiny.close()
                 stat_results.update({"seconds_played": seconds_played})
                 stat_results.update({"clan_members_played_with": clan_members_played_with})
                 stat_results.update({"unique_clan_members_played_with": len(unique_clan_members_played_with)})
 
                 break
+        
+            # If we get 1665 (private profile)
+            elif str(profile_data['ErrorCode']) == "1665":
+                stat_results.update({"seconds_played": '0'})
+                stat_results.update({"clan_members_played_with": '0'})
+                stat_results.update({"unique_clan_members_played_with": '0'})
+            
+            # If we get some other error code
+            else:
+                stat_results.update({"seconds_played": '0'})
+                stat_results.update({"clan_members_played_with": '0'})
+                stat_results.update({"unique_clan_members_played_with": '0'})
 
+        await destiny.close()
         return stat_results
 
     async def check_if_clan_member(self, bungie_id=None, profile_name=None):
