@@ -213,13 +213,6 @@ class ClanActivity(commands.Cog):
 
             if str(profile_data['ErrorCode']) == "1":
 
-                # See if their profile is set to private
-                if str(profile_data['Response']['profile']['privacy']) == "1":
-                    stat_results.update({"seconds_played": 0})
-                    stat_results.update({"clan_members_played_with": 0})
-                    stat_results.update({"unique_clan_members_played_with": 0})
-                    break
-
                 member_type = profile_type
 
                 character_ids = profile_data['Response']['profile']['data']['characterIds']
@@ -241,9 +234,18 @@ class ClanActivity(commands.Cog):
 
                         await self.debug_api_call(history_report)
 
+
+                        # See if their profile is set to private
+                        if str(history_report['ErrorCode']) == "1665":
+                            pull_more_reports = False
+                            stat_results.update({"seconds_played": 0})
+                            stat_results.update({"clan_members_played_with": 0})
+                            stat_results.update({"unique_clan_members_played_with": 0})
+                            break
+
                         # If we don't get a response, we're done
                         if len(history_report['Response']) == 0:
-                            pull_more_report = False
+                            pull_more_reports = False
                             break
 
                         # See if it has any activities in it
@@ -267,7 +269,7 @@ class ClanActivity(commands.Cog):
                                 await self.debug_api_call(activity_info)
 
                                 if len(history_report['Response']) == 0:
-                                    pull_more_report = False
+                                    pull_more_reports = False
                                     break
 
                                 # See who they played with in that activity
@@ -393,8 +395,8 @@ class ClanActivity(commands.Cog):
                                                                                             api_response['Message'],
                                                                                             api_response[
                                                                                                 'MessageData']))
-        if 'Response' in api_response.keys():
-            print("\t\tRESPONSE: {}".format(api_response['Response']))
+        #if 'Response' in api_response.keys():
+        #    print("\t\tRESPONSE: {}".format(api_response['Response']))
 
 
 # Cog extension entry point

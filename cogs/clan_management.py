@@ -103,8 +103,8 @@ class ClanManagement(commands.Cog):
                         if member_registered is False:
                             csv_writer.writerow([clan_member['name'], 'N/A', 'False', 'True', 'N/A', '0'])
 
-                    # Upload the file to discord
-                    await ctx.send(file=discord.File("reports/" + report_file_name))
+                # Upload the file to discord
+                await ctx.send(file=discord.File("reports/" + report_file_name))
 
     @commands.command()
     async def roster_count(self, ctx):
