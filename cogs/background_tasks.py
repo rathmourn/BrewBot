@@ -14,10 +14,12 @@ class BackgroundTasks(commands.Cog):
 
         self.clan_roster_update.start()
         self.clan_activity_update.start()
+        self.clan_discord_name_update.start()
 
     def cog_unload(self):
         self.clan_roster_update.cancel()
         self.clan_activity_update.cancel()
+        self.clan_discord_name_update.cancel()
 
     ####################################################################################################################
     # Clan Roster Updater
@@ -40,6 +42,41 @@ class BackgroundTasks(commands.Cog):
     @clan_roster_update.before_loop
     async def before_clan_roster_update(self):
         print("Waiting to start clan roster updater until bot is ready...")
+        await self.bot.wait_until_ready()
+
+    # End of Clan Roster Updater
+    ####################################################################################################################
+
+    ####################################################################################################################
+    # Clan Discord Name Updater
+
+    @tasks.loop(hours=1)
+    async def clan_discord_name_update(self):
+        print("[*] >>> BACKGROUND: Updating clan's discord names in DB...")
+
+        for user_file in os.listdir(config.BOT_DB):
+            if user_file.endswith(".json"):
+                with open(config.BOT_DB + user_file) as user_file_data:
+                    user_data = json.load(user_file_data)
+                           
+                for guild in self.bot.guilds:
+                    # Only do Ace's Brew Discord
+                    if guild.id == 534781834924523520:
+                        for member in guild.members:
+                            if str(member.id) == str(user_data['discord_id']):
+                                if member.nick is not None:
+                                    user_data['discord_name'] = str(member.nick)
+                                else:
+                                    user_data['discord_name'] = str(member.display_name)
+
+                                with open(config.BOT_DB + user_file, 'w') as user_write_file:
+                                    json.dump(user_data, user_write_file)
+
+        print("[*] >>> BACKGROUND: Discord names updated!")
+
+    @clan_discord_name_update.before_loop
+    async def before_discord_clan_update(self):
+        print("Waiting to start clan discord name updater until bot is ready...")
         await self.bot.wait_until_ready()
 
     # End of Clan Roster Updater

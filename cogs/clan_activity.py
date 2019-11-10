@@ -396,7 +396,7 @@ class ClanActivity(commands.Cog):
                                                                                             api_response[
                                                                                                 'MessageData']))
         #if 'Response' in api_response.keys():
-        #    print("\t\tRESPONSE: {}".format(api_response['Response']))
+            #print("\t\tRESPONSE: {}".format(api_response['Response']))
 
 
 # Cog extension entry point

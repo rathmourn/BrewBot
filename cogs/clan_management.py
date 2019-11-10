@@ -122,26 +122,6 @@ class ClanManagement(commands.Cog):
 
             await ctx.send(embed=embed)
 
-    @commands.command()
-    @is_authorized()
-    async def roster_update(self, ctx):
-        """Updates the clan rosters. [ADMIN ONLY]
-        """
-        await ctx.send("Updating clan rosters...")
-
-        with ctx.typing():
-            for clan in config.BREW_CLANS:
-                clan_members = bungie_api.generate_clan_list(clan['clan_id'])
-
-                clan_data = {}
-                clan_data.update({'last_updated': str(datetime.datetime.utcnow())})
-                clan_data.update({'members': clan_members})
-
-                with open("clans/" + str(clan['clan_id']) + ".json", 'w+') as clan_data_file:
-                    json.dump(clan_data, clan_data_file)
-
-            await ctx.send("Rosters updated.")
-
     @commands.command(hidden=False)
     async def register(self, ctx, *args):
         """Registers the user with the bot.
