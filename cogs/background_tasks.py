@@ -115,10 +115,10 @@ class BackgroundTasks(commands.Cog):
                 iter_date = reporting_period
 
                 while iter_date < today_utc:
-                    print(iter_date)
+                    print(">>> STATS FOR: {}".format(iter_date))
 
                     # See if we have stats already for that date (we don't pull current day))
-                    if iter_date.strftime("%Y-%m-%d") in user_data['game_activity'].keys() and iter_date.strftime("%Y-%m-%d") != today_report: # and iter_date.strftime("%Y-%m-%d") != yesterday_report:
+                    if iter_date.strftime("%Y-%m-%d") in user_data['game_activity'].keys() and iter_date.strftime("%Y-%m-%d") != today_report:
                         daily_bungie_stats.update(
                             {
                                 iter_date.strftime("%Y-%m-%d"): user_data['game_activity'][iter_date.strftime("%Y-%m-%d")]

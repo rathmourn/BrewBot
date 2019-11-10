@@ -148,7 +148,7 @@ class ClanManagement(commands.Cog):
                 await ctx.send("Found you in the clan rosters. DM'ing you with further instructions.")
 
                 await ctx.author.send("If you wish to finalize your registration please type:")
-                await ctx.author.send('Please type `{}register verify {}` to complete registration.'.format(
+                await ctx.author.send('Please response with `{}register verify {}` to complete registration.'.format(
                     config.BOT_COMMAND_PREFIX, clan_member['bungie_id']))
 
             else:
