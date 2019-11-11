@@ -5,7 +5,7 @@ import json
 import csv
 import pydest
 import datetime
-
+import random
 import config
 import bungie_api
 
@@ -35,6 +35,16 @@ class ClanManagement(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+
+    @commands.command(hidden=True)
+    async def jman(self,ctx):
+        with open(config.BOT_BASEDIR + "gman.json") as gman_memes_file:
+            gman_memes = json.load(gman_memes_file)
+
+        random_choice = random.choice(list(gman_memes.values()))
+        print(random_choice)
+        activity = discord.Game(name=str(random_choice))
+        await self.bot.change_presence(activity=activity)
 
     @commands.command()
     @is_authorized()
@@ -266,7 +276,7 @@ class ClanManagement(commands.Cog):
         return_results = {}
         return_results['is_member'] = False
 
-        for clan_roster in os.listdir("clans/"):
+        for clan_roster in os.listdir(config.BOT_BASEDIR + "clans/"):
             with open(config.BOT_BASEDIR + "clans/" + clan_roster) as clan_data_file:
                 clan_data = json.load(clan_data_file)
 
