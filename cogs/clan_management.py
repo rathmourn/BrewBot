@@ -129,8 +129,11 @@ class ClanManagement(commands.Cog):
             Simply running the register command will cause the bot to search for a destiny profile that matches your
             discord name.
 
-            Running `register profile [name]` will cause the bot to search for your destiny profile by the name given
-            if your names don't match.
+            [!] If BrewBot doesn't recognize your user name, type $register profile SteamName. 
+
+            [!] If your Steam name is more than 1 word, you need to put quotation marks around it. E.g. $register profile "Steam Name".
+
+            [!] If you're on cross-save and console is your main account, use your console username to register instead.
         """
 
         destiny = pydest.Pydest(config.BUNGIE_API_KEY)
@@ -148,12 +151,12 @@ class ClanManagement(commands.Cog):
                 await ctx.send("Found you in the clan rosters. DM'ing you with further instructions.")
 
                 await ctx.author.send("If you wish to finalize your registration please type:")
-                await ctx.author.send('Please response with `{}register verify {}` to complete registration.'.format(
+                await ctx.author.send('Please reply with `{}register verify {}` to complete registration.'.format(
                     config.BOT_COMMAND_PREFIX, clan_member['bungie_id']))
 
             else:
                 await ctx.send("You are not in our clan rosters. If your in-game name does not match your discord "
-                               "name try searching for it with `$register profile [name]`")
+                               "name try searching for it with `$register profile [name]`. If you need further help type `$help register` or contact a Mod.")
 
         # Register if discord name doesn't match
         elif args[0] == 'profile' and len(args) == 2:
@@ -170,7 +173,8 @@ class ClanManagement(commands.Cog):
                         config.BOT_COMMAND_PREFIX, clan_member['bungie_id']))
 
             else:
-                await ctx.send("You are not in our clan rosters. Please validate your membership before registering.")
+                await ctx.send("You are not in our clan rosters. If your in-game name does not match your discord "
+                               "name try searching for it with `$register profile [name]`. If you need further help type `$help register` or contact a Mod.")
 
         # Verify and complete registration
         elif args[0] == 'verify' and len(args) == 2:
