@@ -1,104 +1,100 @@
+# Just a utility script to update bungie-only stats manually
+
 import datetime
-from dateutil import tz
-import os
 import json
-from discord.ext import commands
-import discord
 import pydest
-import time
+import os
 import config
+import asyncio
+import time
+
+class ActivityUpdater():
+    
+    # Clan Activity Updater
+
+    async def clan_activity_update(self):
+        print("[*] >>> Updating clan activity scores per background task...")
+
+        for user_file in os.listdir(config.BOT_DB):
+            if user_file.endswith(".json"):
+                with open(config.BOT_DB + user_file) as user_file_data:
+                    user_data = json.load(user_file_data)
+
+                print("[*] >>> BACKGROUND: Updating to {}'s stats...".format(user_data['bungie_name']))
+
+                # Calculate discord stats
+#                discord_stats = await activity_manager.get_user_discord_activity_stats(user_data['discord_id'])
+
+                # Update the data in the user's record
+                user_data['chat_events'] = 0 # discord_stats['chat_events']
+                user_data['characters_typed'] = 0 #discord_stats['characters_typed']
+                user_data['vc_minutes'] = 0 # discord_stats['vc_minutes']
+
+                # Calculate bungie stats
+                daily_bungie_stats = {}
+
+                today_utc = datetime.datetime.utcnow()
+                today_report = today_utc.strftime("%Y-%m-%d")
+                reporting_period = (today_utc - datetime.timedelta(days=(int(config.STATISTICS_PERIOD))))
+
+                iter_date = reporting_period
+
+                while iter_date < today_utc:
+                    print(">>> STATS FOR: {}".format(iter_date))
+
+                    # See if we have stats already for that date (we don't pull current day))
+                    if iter_date.strftime("%Y-%m-%d") in user_data['game_activity'].keys() and iter_date.strftime("%Y-%m-%d") != today_report:
+                        daily_bungie_stats.update(
+                            {
+                                iter_date.strftime("%Y-%m-%d"): user_data['game_activity'][iter_date.strftime("%Y-%m-%d")]
+                            }
+                        )
+
+                    # If we don't, get them
+                    else:
+                        bungie_stats = await self.get_user_bungie_activity_stats(user_data['bungie_id'], iter_date)
+
+                        daily_bungie_stats.update(
+                            {
+                                iter_date.strftime("%Y-%m-%d"): {
+                                    "seconds_played": bungie_stats['seconds_played'],
+                                    "unique_clan_members_played_with": bungie_stats['unique_clan_members_played_with'],
+                                    "clan_members_played_with": bungie_stats['clan_members_played_with']
+                                }
+                            }
+                        )
+
+                    iter_date = iter_date + datetime.timedelta(days=1)
+
+                # Update the data in the user's record.
+                user_data['game_activity'] = daily_bungie_stats
 
 
-def is_authorized():
-    """
-    Command decorator to validate if a user is authorized for a bot's command or not.
-    Returns: None
+                total_seconds_played = 0
+                total_unique_members_played_with = 0
+                total_clan_members_played_with = 0
 
-    """
+                for stat_day, stat_values in user_data['game_activity'].items():
+                    total_seconds_played += user_data['game_activity'][stat_day]['seconds_played']
+                    total_unique_members_played_with += user_data['game_activity'][stat_day]['unique_clan_members_played_with']
+                    total_clan_members_played_with += user_data['game_activity'][stat_day]['clan_members_played_with']
 
-    async def check_authorization(ctx):
-        are_they_authorized = False
-        for role in ctx.author.roles:
-            if str(role.name) == "Admin" or str(role.name) == "Bot Master":
-                are_they_authorized = True
-        
-        return are_they_authorized
+                bonus_multiplier = total_clan_members_played_with + total_unique_members_played_with
+                activity_score = total_seconds_played + (user_data['chat_events'] * 60) + \
+                                               (user_data['characters_typed'] * 3) * bonus_multiplier
 
-    return commands.check(check_authorization)
+                user_data['clan_activity_score'] = activity_score
+
+                with open(config.BOT_DB + user_file, 'w') as user_file_data:
+                    json.dump(user_data, user_file_data)
+
+                print("[*] >>> BACKGROUND: Update to {}'s stats complete.".format(user_data['bungie_name']))
+
+        print("[*] >>> Updating clan activity scores updated in background complete!")
 
 
-class ClanActivity(commands.Cog):
-    """
-    Base cog class to support all clan activity reporting for BrewBot.
-    """
-
-    def __init__(self, bot):
-        self.bot = bot
-
-    @commands.command()
-    @is_authorized()
-    async def activity(self, ctx):
-        """Give a user their activity stats.
-
-            If given no arguments, pulls the sender's stats.
-            Otherwise `$activity [user]` will attempt to pull that user's activity stats.
-        """
-
-        with ctx.typing():
-            # If we are just looking up the author's stats
-            print(ctx.message.mentions)
-            if len(ctx.message.mentions) == 0:
-                try:
-                    with open(config.BOT_DB + str(ctx.author.id) + ".json") as user_data_file:
-                        user_data = json.load(user_data_file)
-
-                        report_message = self._print_activity_report(user_data)
-                        await ctx.send(embed=report_message)
-
-                except FileNotFoundError:
-                    await ctx.send("You do not appear to be registered with me.")
-                    return
-
-            # Else, we need to find the user they are looking for
-            else:
-                for mention in ctx.message.mentions:
-                    try:
-                        with open(config.BOT_DB + str(mention.id) + ".json") as user_data_file:
-                            user_data = json.load(user_data_file)
-
-                            report_message = self._print_activity_report(user_data)
-                            await ctx.send(embed=report_message)
-
-                    except FileNotFoundError:
-                        await ctx.send(
-                            "Unable to find stats for {} among my registered members. Please verify the name and "
-                            "search again.".format(
-                                mention.mention))
-                        return
-
-    async def get_user_discord_activity_stats(self, discord_id):
-        stat_results = {}
-        chat_events = 0
-        characters_typed = 0
-        today = datetime.datetime.utcnow()
-
-        for guild in self.bot.guilds:
-            # Only do Ace's Brew Discord
-            if guild.id == 534781834924523520:
-                for channel in guild.text_channels:
-                    days_before = config.STATISTICS_PERIOD
-                    reporting_period = today - datetime.timedelta(days_before)
-
-                    async for message in channel.history(limit=None, after=reporting_period):
-                        if str(message.author.id) == str(discord_id):
-                            chat_events += 1
-                            characters_typed += len(message.content)
-
-        stat_results.update({'characters_typed': int(characters_typed)})
-        stat_results.update({'chat_events': int(chat_events)})
-        stat_results.update({'vc_minutes': 0})
-
-        return stat_results
+    # End of Clan Roster Updater
+    ####################################################################################################################
 
     async def get_user_bungie_activity_stats(self, bungie_id, day_to_pull):
             stat_results = {}
@@ -262,7 +258,7 @@ class ClanActivity(commands.Cog):
 
             return stat_results
 
-    async def check_if_clan_member(self, bungie_id=None, profile_name=None):
+    def check_if_clan_member(self, bungie_id=None, profile_name=None):
         """Checks the cached roster if member is in the clans.
 
             Returns (dict):
@@ -298,51 +294,7 @@ class ClanActivity(commands.Cog):
 
         return return_results
 
-    def _print_activity_report(self, user_data):
-        total_seconds_played = 0
-        total_unique_members_played_with = 0
-
-        for stat_day, stat_values in user_data['game_activity'].items():
-            total_seconds_played += user_data['game_activity'][stat_day]['seconds_played']
-            total_unique_members_played_with += user_data['game_activity'][stat_day][
-                'unique_clan_members_played_with']
-
-        # Determine color-based thresholds
-        GREEN = 0x00ff00
-        ORANGE = 0xff8000
-        RED = 0xff0000
-        clan_activity_score = int(user_data['clan_activity_score'])
-
-        if clan_activity_score > 3000000:
-            report_color = GREEN
-            clan_activity_status = "Awoken"
-        elif clan_activity_score > 1000000:
-            report_color = ORANGE
-            clan_activity_status = "Dozing"
-        else:
-            report_color = RED
-            clan_activity_status = "Dead"
-
-        embed = discord.Embed(title="Clan Activity Report",
-                              description="{}'s activity score over the last {} days".format(
-                                  user_data['bungie_name'], config.STATISTICS_PERIOD), color=report_color)
-
-        embed.add_field(name="Discord Messages", value=user_data['chat_events'], inline=True)
-        #embed.add_field(name="Discord Characters Sent", value=user_data['characters_typed'], inline=True)
-        embed.add_field(name="Destiny Time Played",
-                        value=str(datetime.timedelta(seconds=total_seconds_played)), inline=False)
-        embed.add_field(name="Unique Clan Members Played With ", value=str(total_unique_members_played_with),
-                        inline=True)
-
-        embed.add_field(name="Total Activity Score", value=f"{clan_activity_score:,}",
-                        inline=False)
-
-        embed.add_field(name="Clan Activity Status", value=clan_activity_status,
-                        inline=True)
-
-        return embed
-
-    async def debug_api_call(self, api_response):
+    def debug_api_call(self, api_response):
         # if api_response['ErrorCode'] != 1:
         time_now = datetime.datetime.utcnow()
         print("{}: ErrorCode: {}, ThrottleSeconds: {}, Message: {}, MessageData: {}".format(time_now,
@@ -355,14 +307,15 @@ class ClanActivity(commands.Cog):
         #if 'Response' in api_response.keys():
             #print("\t\tRESPONSE: {}".format(api_response['Response']))
 
+def main():
+    activity_manager = ActivityUpdater()
+    
+    loop = asyncio.get_event_loop()
 
-# Cog extension entry point
-def setup(bot):
-    print("[*] Loading Clan Activity module.")
-    bot.add_cog(ClanActivity(bot))
+    loop.run_until_complete(activity_manager.clan_activity_update())
+    loop.close()
 
 
-# Cog extension exit point
-def teardown(bot):
-    print("[*] Unloading Clan Activity module.")
-    bot.remove_cog('ClanActivity')
+
+if __name__ == '__main__':
+    main()
