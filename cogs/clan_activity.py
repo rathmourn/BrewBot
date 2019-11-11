@@ -114,7 +114,7 @@ class ClanActivity(commands.Cog):
                         destiny = pydest.Pydest(config.BUNGIE_API_KEY)
 
                         profile_data = await destiny.api.get_profile(profile_type, bungie_id, components=['100'])
-                        self.debug_api_call(profile_data)
+                        await self.debug_api_call(profile_data)
 
                         await destiny.close()
                     except:
@@ -145,7 +145,7 @@ class ClanActivity(commands.Cog):
                                     destiny = pydest.Pydest(config.BUNGIE_API_KEY)
 
                                     history_report = await destiny.api.get_activity_history(member_type, bungie_id, character_id, count=25, mode=None, page=report_page)
-                                    self.debug_api_call(history_report)
+                                    await self.debug_api_call(history_report)
 
                                     await destiny.close()
 
@@ -192,7 +192,7 @@ class ClanActivity(commands.Cog):
                                             destiny = pydest.Pydest(config.BUNGIE_API_KEY)
 
                                             activity_info = await destiny.api.get_post_game_carnage_report(character_activity['activityDetails']['instanceId'])
-                                            self.debug_api_call(activity_info)
+                                            await self.debug_api_call(activity_info)
 
                                             await destiny.close()
                                         except:
@@ -226,7 +226,7 @@ class ClanActivity(commands.Cog):
                                             player_id = activity_player['player']['destinyUserInfo']['membershipId']
                                             print("\t\t\tLOOKUP: {} : {}".format(player_name, player_id))
                                             # Find out if the players were in our clans
-                                            clan_search_results = self.check_if_clan_member(bungie_id=player_id)
+                                            clan_search_results = await self.check_if_clan_member(bungie_id=player_id)
 
                                             if clan_search_results['is_member']:
                                                 activity_clan_player_count += 1
