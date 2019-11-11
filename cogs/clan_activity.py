@@ -274,7 +274,7 @@ class ClanActivity(commands.Cog):
         return_results['is_member'] = False
 
         for clan_roster in os.listdir("clans/"):
-            with open("clans/" + clan_roster) as clan_data_file:
+            with open(config.BOT_BASEDIR + "clans/" + clan_roster) as clan_data_file:
                 clan_data = json.load(clan_data_file)
 
             for member in clan_data['members']:
