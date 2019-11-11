@@ -34,7 +34,7 @@ class BackgroundTasks(commands.Cog):
             clan_data.update({'last_updated': str(datetime.datetime.utcnow())})
             clan_data.update({'members': clan_members})
 
-            with open("clans/" + str(clan['clan_id']) + ".json", 'w+') as clan_data_file:
+            with open(config.BOT_BASEDIR + "clans/" + str(clan['clan_id']) + ".json", 'w+') as clan_data_file:
                 json.dump(clan_data, clan_data_file)
 
         print("[*] >>> BACKGROUND: Clan rosters updated!")

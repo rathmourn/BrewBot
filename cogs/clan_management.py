@@ -5,7 +5,7 @@ import json
 import csv
 import pydest
 import datetime
-
+import random
 import config
 import bungie_api
 
@@ -36,6 +36,16 @@ class ClanManagement(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    @commands.command(hidden=True)
+    async def jman(self,ctx):
+        with open(config.BOT_BASEDIR + "gman.json") as gman_memes_file:
+            gman_memes = json.load(gman_memes_file)
+
+        random_choice = random.choice(list(gman_memes.values()))
+        print(random_choice)
+        activity = discord.Game(name=str(random_choice))
+        await self.bot.change_presence(activity=activity)
+
     @commands.command()
     @is_authorized()
     async def clan_report(self, ctx):
@@ -50,7 +60,7 @@ class ClanManagement(commands.Cog):
                 # Open the initial report file and write the header
                 report_file_name = str(clan['clan_name']).replace(" ", "_").replace("'", "") + ".csv"
 
-                with open("reports/" + report_file_name, 'w+') as csv_report:
+                with open(config.BOT_BASEDIR + "reports/" + report_file_name, 'w+') as csv_report:
                     csv_writer = csv.writer(csv_report)
                     csv_writer.writerow(
                         ['steam_name', 'discord_name', 'registered?', 'in_clan?', 'in_discord?', 'activity_score'])
@@ -88,7 +98,7 @@ class ClanManagement(commands.Cog):
                                 registered_users.append(user_data)
 
                     # Iterate the roster for all the unregistered folks
-                    with open("clans/" + str(clan['clan_id']) + ".json") as clan_data_file:
+                    with open(config.BOT_BASEDIR + "clans/" + str(clan['clan_id']) + ".json") as clan_data_file:
                         clan_data = json.load(clan_data_file)
 
                     for clan_member in clan_data['members']:
@@ -116,7 +126,7 @@ class ClanManagement(commands.Cog):
                                   description="Roster counts across all clans.")
 
             for clan in config.BREW_CLANS:
-                with open("clans/" + str(clan['clan_id']) + ".json") as clan_data_file:
+                with open(config.BOT_BASEDIR + "clans/" + str(clan['clan_id']) + ".json") as clan_data_file:
                     clan_data = json.load(clan_data_file)
                     embed.add_field(name=clan['clan_name'], value=str(len(clan_data['members'])), inline=False)
 
@@ -266,8 +276,8 @@ class ClanManagement(commands.Cog):
         return_results = {}
         return_results['is_member'] = False
 
-        for clan_roster in os.listdir("clans/"):
-            with open("clans/" + clan_roster) as clan_data_file:
+        for clan_roster in os.listdir(config.BOT_BASEDIR + "clans/"):
+            with open(config.BOT_BASEDIR + "clans/" + clan_roster) as clan_data_file:
                 clan_data = json.load(clan_data_file)
 
             for member in clan_data['members']:
