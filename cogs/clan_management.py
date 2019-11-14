@@ -46,7 +46,7 @@ class ClanManagement(commands.Cog):
         activity = discord.Game(name=str(random_choice))
         await self.bot.change_presence(activity=activity)
 
-    @commands.command()
+    @commands.command(hidden=True)
     @is_authorized()
     async def clan_report(self, ctx):
         """Generate a clan report. [ADMIN ONLY]

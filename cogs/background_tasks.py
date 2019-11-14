@@ -106,43 +106,43 @@ class BackgroundTasks(commands.Cog):
                 user_data['vc_minutes'] = discord_stats['vc_minutes']
 
                 # Calculate bungie stats
-                daily_bungie_stats = {}
+                # daily_bungie_stats = {}
 
-                today_utc = datetime.datetime.utcnow()
-                today_report = today_utc.strftime("%Y-%m-%d")
-                reporting_period = (today_utc - datetime.timedelta(days=(int(config.STATISTICS_PERIOD))))
+                # today_utc = datetime.datetime.utcnow()
+                # today_report = today_utc.strftime("%Y-%m-%d")
+                # reporting_period = (today_utc - datetime.timedelta(days=(int(config.STATISTICS_PERIOD))))
 
-                iter_date = reporting_period
+                # iter_date = reporting_period
 
-                while iter_date < today_utc:
-                    print(">>> STATS FOR: {}".format(iter_date))
+                # while iter_date < today_utc:
+                #     print(">>> STATS FOR: {}".format(iter_date))
 
-                    # See if we have stats already for that date (we don't pull current day))
-                    if iter_date.strftime("%Y-%m-%d") in user_data['game_activity'].keys() and iter_date.strftime("%Y-%m-%d") != today_report:
-                        daily_bungie_stats.update(
-                            {
-                                iter_date.strftime("%Y-%m-%d"): user_data['game_activity'][iter_date.strftime("%Y-%m-%d")]
-                            }
-                        )
+                #     # See if we have stats already for that date (we don't pull current day))
+                #     if iter_date.strftime("%Y-%m-%d") in user_data['game_activity'].keys() and iter_date.strftime("%Y-%m-%d") != today_report:
+                #         daily_bungie_stats.update(
+                #             {
+                #                 iter_date.strftime("%Y-%m-%d"): user_data['game_activity'][iter_date.strftime("%Y-%m-%d")]
+                #             }
+                #         )
 
-                    # If we don't, get them
-                    else:
-                        bungie_stats = await activity_manager.get_user_bungie_activity_stats(user_data['bungie_id'], iter_date)
+                #     # If we don't, get them
+                #     else:
+                #         bungie_stats = await activity_manager.get_user_bungie_activity_stats(user_data['bungie_id'], iter_date)
 
-                        daily_bungie_stats.update(
-                            {
-                                iter_date.strftime("%Y-%m-%d"): {
-                                    "seconds_played": bungie_stats['seconds_played'],
-                                    "unique_clan_members_played_with": bungie_stats['unique_clan_members_played_with'],
-                                    "clan_members_played_with": bungie_stats['clan_members_played_with']
-                                }
-                            }
-                        )
+                #         daily_bungie_stats.update(
+                #             {
+                #                 iter_date.strftime("%Y-%m-%d"): {
+                #                     "seconds_played": bungie_stats['seconds_played'],
+                #                     "unique_clan_members_played_with": bungie_stats['unique_clan_members_played_with'],
+                #                     "clan_members_played_with": bungie_stats['clan_members_played_with']
+                #                 }
+                #             }
+                #         )
 
-                    iter_date = iter_date + datetime.timedelta(days=1)
+                #     iter_date = iter_date + datetime.timedelta(days=1)
 
-                # Update the data in the user's record.
-                user_data['game_activity'] = daily_bungie_stats
+                # # Update the data in the user's record.
+                # user_data['game_activity'] = daily_bungie_stats
 
 
                 total_seconds_played = 0

@@ -26,9 +26,9 @@ class ActivityUpdater():
 #                discord_stats = await activity_manager.get_user_discord_activity_stats(user_data['discord_id'])
 
                 # Update the data in the user's record
-                user_data['chat_events'] = 0 # discord_stats['chat_events']
-                user_data['characters_typed'] = 0 #discord_stats['characters_typed']
-                user_data['vc_minutes'] = 0 # discord_stats['vc_minutes']
+#                user_data['chat_events'] = 0 # discord_stats['chat_events']
+#                user_data['characters_typed'] = 0 #discord_stats['characters_typed']
+#                user_data['vc_minutes'] = 0 # discord_stats['vc_minutes']
 
                 # Calculate bungie stats
                 daily_bungie_stats = {}
