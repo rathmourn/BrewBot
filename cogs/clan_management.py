@@ -8,6 +8,7 @@ import datetime
 import random
 import config
 import bungie_api
+import cogs.background_tasks
 
 
 def is_authorized():
@@ -147,6 +148,19 @@ class ClanManagement(commands.Cog):
             [!] If you're on cross-save and console is your main account, use your console username to register instead.
         """
 
+        # Refresh the clan rosters
+        await ctx.send("Pulling the latest clan rosters, one moment please...")
+        for clan in config.BREW_CLANS:
+            clan_members = bungie_api.generate_clan_list(clan['clan_id'])
+
+            clan_data = {}
+            clan_data.update({'last_updated': str(datetime.datetime.utcnow())})
+            clan_data.update({'members': clan_members})
+
+            with open(config.BOT_BASEDIR + "clans/" + str(clan['clan_id']) + ".json", 'w+') as clan_data_file:
+                json.dump(clan_data, clan_data_file)
+
+
         destiny = pydest.Pydest(config.BUNGIE_API_KEY)
 
         # Register if discord name matches
@@ -260,7 +274,7 @@ class ClanManagement(commands.Cog):
                     with open(config.BOT_DB + str(ctx.author.id) + ".json", 'w+') as user_file:
                         json.dump(user_data, user_file)
 
-                    await ctx.author.send("You’re now registered! Please allow 24 – 48 hours for your data to be tabulated." 
+                    await ctx.author.send("You’re now registered! Please allow 24 – 48 hours for your data to be tabulated. " 
                         "During this time, your activity scorecard may not display the correct stats.")
 
                     break
