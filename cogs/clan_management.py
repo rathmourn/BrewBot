@@ -135,6 +135,7 @@ class ClanManagement(commands.Cog):
     @commands.command(hidden=False)
     async def register(self, ctx, *args):
         """Registers the user with the bot.
+            $register [profile SteamName]
 
             Simply running the register command will cause the bot to search for a destiny profile that matches your
             discord name.
@@ -160,13 +161,13 @@ class ClanManagement(commands.Cog):
             if clan_member['is_member']:
                 await ctx.send("Found you in the clan rosters. DM'ing you with further instructions.")
 
-                await ctx.author.send("If you wish to finalize your registration please type:")
-                await ctx.author.send('Please reply with `{}register verify {}` to complete registration.'.format(
+                await ctx.author.send("Please verify your ID to complete the registration process.")
+                await ctx.author.send('Reply to this message with `{}register verify {}` to complete registration.'.format(
                     config.BOT_COMMAND_PREFIX, clan_member['bungie_id']))
 
             else:
-                await ctx.send("You are not in our clan rosters. If your in-game name does not match your discord "
-                               "name try searching for it with `$register profile [name]`. If you need further help type `$help register` or contact a Mod.")
+                await ctx.send("We could not find you in any of our clans. Please make sure that your in-game name matches your Discord name. "
+                    "For more information, type `$help register` or contact a Mod. ")
 
         # Register if discord name doesn't match
         elif args[0] == 'profile' and len(args) == 2:
@@ -177,14 +178,14 @@ class ClanManagement(commands.Cog):
             if clan_member['is_member']:
                 await ctx.send("Found you in the clan rosters. DM'ing you with further instructions.")
 
-                await ctx.author.send("If you wish to finalize your registration please type:")
+                await ctx.author.send("Please verify your ID to complete the registration process.")
                 await ctx.author.send(
-                    'Please reply to this DM with `{}register verify {}` to complete registration.'.format(
+                    'Reply to this message with `{}register verify {}` to complete registration.'.format(
                         config.BOT_COMMAND_PREFIX, clan_member['bungie_id']))
 
             else:
-                await ctx.send("You are not in our clan rosters. If your in-game name does not match your discord "
-                               "name try searching for it with `$register profile [name]`. If you need further help type `$help register` or contact a Mod.")
+                await ctx.send("We could not find you in any of our clans. Please make sure that your in-game name matches your Discord name. "
+                    "For more information, type `$help register` or contact a Mod. ")
 
         # Verify and complete registration
         elif args[0] == 'verify' and len(args) == 2:
@@ -259,7 +260,8 @@ class ClanManagement(commands.Cog):
                     with open(config.BOT_DB + str(ctx.author.id) + ".json", 'w+') as user_file:
                         json.dump(user_data, user_file)
 
-                    await ctx.author.send("You are registered!")
+                    await ctx.author.send("You’re now registered! Please allow 24 – 48 hours for your data to be tabulated." 
+                        "During this time, your activity scorecard may not display the correct stats.")
 
                     break
 
