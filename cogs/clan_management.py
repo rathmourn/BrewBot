@@ -152,18 +152,19 @@ class ClanManagement(commands.Cog):
 
         # Register if discord name matches
         if len(args) == 0:
+
             # Refresh the clan rosters
             await ctx.send("Pulling the latest clan rosters, one moment please...")
             for clan in config.BREW_CLANS:
-            clan_members = bungie_api.generate_clan_list(clan['clan_id'])
+                clan_members = bungie_api.generate_clan_list(clan['clan_id'])
 
-            clan_data = {}
-            clan_data.update({'last_updated': str(datetime.datetime.utcnow())})
-            clan_data.update({'members': clan_members})
+                clan_data = {}
+                clan_data.update({'last_updated': str(datetime.datetime.utcnow())})
+                clan_data.update({'members': clan_members})
 
             with open(config.BOT_BASEDIR + "clans/" + str(clan['clan_id']) + ".json", 'w+') as clan_data_file:
                 json.dump(clan_data, clan_data_file)
-
+                
             # See if they are clan member
             if ctx.author.nick is not None:
                 clan_member = await self.check_if_clan_member(profile_name=ctx.author.nick)
@@ -183,18 +184,19 @@ class ClanManagement(commands.Cog):
 
         # Register if discord name doesn't match
         elif args[0] == 'profile' and len(args) == 2:
+
             # Refresh the clan rosters
             await ctx.send("Pulling the latest clan rosters, one moment please...")
             for clan in config.BREW_CLANS:
-            clan_members = bungie_api.generate_clan_list(clan['clan_id'])
+                clan_members = bungie_api.generate_clan_list(clan['clan_id'])
 
-            clan_data = {}
-            clan_data.update({'last_updated': str(datetime.datetime.utcnow())})
-            clan_data.update({'members': clan_members})
+                clan_data = {}
+                clan_data.update({'last_updated': str(datetime.datetime.utcnow())})
+                clan_data.update({'members': clan_members})
 
-            with open(config.BOT_BASEDIR + "clans/" + str(clan['clan_id']) + ".json", 'w+') as clan_data_file:
-                json.dump(clan_data, clan_data_file)
-
+                with open(config.BOT_BASEDIR + "clans/" + str(clan['clan_id']) + ".json", 'w+') as clan_data_file:
+                    json.dump(clan_data, clan_data_file)
+                    
             # See if they are clan member
             clan_member = await self.check_if_clan_member(profile_name=str(args[1]))
 
