@@ -53,10 +53,6 @@ class BackgroundTasks(commands.Cog):
                                 with open(config.BOT_DB + clan_member_file, "w") as clan_member_data_file:
                                     json.dump(clan_member_data, clan_member_data_file)
 
-                    
-
-        exit(0)
-
         # Check all enrolled members against rosters and remove non-clan enrollees
         clan_member_ids = []
 
