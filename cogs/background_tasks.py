@@ -37,6 +37,25 @@ class BackgroundTasks(commands.Cog):
             with open(config.BOT_BASEDIR + "clans/" + str(clan['clan_id']) + ".json", 'w+') as clan_data_file:
                 json.dump(clan_data, clan_data_file)
 
+            # Validate clan members who may have transferred
+            for clan_member in clan_members:
+                for clan_member_file in os.listdir(config.BOT_DB):
+                    if clan_member_file.endswith(".json"):
+                        with open(config.BOT_DB + clan_member_file) as clan_member_data_file:
+                            clan_member_data = json.load(clan_member_data_file)
+                        
+                        if str(clan_member_data['bungie_id']) == str(clan_member['id']):
+                            if clan_member_data['clan_id'] != clan['clan_id']:
+                                print("[*] {} is not in the right clan. Updating their info...".format(clan_member_data['bungie_name']))
+                                clan_member_data['clan_id'] = clan['clan_id']
+                                clan_member_data['clan_name'] = clan['clan_name']
+
+                                with open(config.BOT_DB + clan_member_file, "w") as clan_member_data_file:
+                                    json.dump(clan_member_data, clan_member_data_file)
+
+                    
+
+        exit(0)
 
         # Check all enrolled members against rosters and remove non-clan enrollees
         clan_member_ids = []
